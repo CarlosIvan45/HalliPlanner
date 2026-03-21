@@ -2,58 +2,55 @@ package com.example.halliplanner
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import android.widget.TextView
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Calendar
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [HomeFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class HomeFragment : Fragment(R.layout.fragment_home) {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
+    private lateinit var db: FirebaseFirestore
+    private lateinit var pendingTasksText: TextView
+
+    private lateinit var txtMeetingsHome: TextView
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        db = FirebaseFirestore.getInstance()
+
+        pendingTasksText = view.findViewById(R.id.txtHomeTasks)
+
+        txtMeetingsHome = view.findViewById(R.id.txtMeetingsHome)
+
+        loadPendingTasks()
+        loadTodayMeetings()
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_home, container, false)
+    private fun loadPendingTasks() {
+
+        db.collection("tasks")
+            .whereEqualTo("status", "Pendiente")
+            .get()
+            .addOnSuccessListener { documents ->
+
+                pendingTasksText.text =
+                    "${documents.size()} tareas por completar hoy"
+            }
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment HomeFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            HomeFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    private fun loadTodayMeetings(){
+
+        val calendar = Calendar.getInstance()
+        val today = "${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)+1}/${calendar.get(Calendar.YEAR)}"
+
+        db.collection("meetings")
+            .whereEqualTo("date",today)
+            .get()
+            .addOnSuccessListener { documents ->
+
+                txtMeetingsHome.text =
+                    "${documents.size()} reuniones hoy"
             }
     }
 }

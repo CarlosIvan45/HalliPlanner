@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="20dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <!-- TITULO -->
+        <EditText
+            android:id="@+id/inputTitle"
+            android:hint="Título de la tarea"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- DESCRIPCION -->
+        <EditText
+            android:id="@+id/inputDescription"
+            android:hint="Descripción"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- RESPONSABLE -->
+        <EditText
+            android:id="@+id/inputAssigned"
+            android:hint="Responsable"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- FECHA LIMITE -->
+        <EditText
+            android:id="@+id/inputDate"
+            android:hint="Fecha límite"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- PRIORIDAD -->
+        <Spinner
+            android:id="@+id/inputPriority"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <!-- ESTADO -->
+        <Spinner
+            android:id="@+id/inputStatus"
+            android:layout_marginTop="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+    </LinearLayout>
+
+</ScrollView>

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "121466436291",
+    "project_id": "halliplanner",
+    "storage_bucket": "halliplanner.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:121466436291:android:b83efa4067d1edbb124076",
+        "android_client_info": {
+          "package_name": "com.example.halliplanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpRog45_PlKtIr9Ek7Zqo4jmAFNCu6Dhw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

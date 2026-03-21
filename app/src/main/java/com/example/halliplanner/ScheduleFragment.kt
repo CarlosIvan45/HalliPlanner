@@ -1,59 +1,145 @@
 package com.example.halliplanner
 
+import android.app.AlertDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
 import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import android.widget.*
+import com.google.android.material.button.MaterialButton
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.*
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [ScheduleFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class ScheduleFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private lateinit var db: FirebaseFirestore
+    private lateinit var meetingListView: ListView
+    private lateinit var btnAddMeeting: MaterialButton
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+    private lateinit var meetingList: ArrayList<String>
+    private lateinit var adapter: ArrayAdapter<String>
+
+    private var selectedDate = ""
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        db = FirebaseFirestore.getInstance()
+
+        meetingListView = view.findViewById(R.id.meetingList)
+        btnAddMeeting = view.findViewById(R.id.btnAddMeeting)
+
+        val calendarView = view.findViewById<CalendarView>(R.id.calendarView)
+
+        meetingList = ArrayList()
+
+        adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_list_item_1,
+            meetingList
+        )
+
+        meetingListView.adapter = adapter
+
+        val calendar = Calendar.getInstance()
+        selectedDate = "${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH)+1}/${calendar.get(Calendar.YEAR)}"
+
+        loadMeetings(selectedDate)
+
+        calendarView.setOnDateChangeListener { _, year, month, day ->
+
+            selectedDate = "$day/${month+1}/$year"
+            loadMeetings(selectedDate)
+
+        }
+
+        btnAddMeeting.setOnClickListener {
+            showAddMeetingDialog()
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_schedule, container, false)
+    private fun showAddMeetingDialog() {
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_meeting, null)
+
+        val titleInput = dialogView.findViewById<EditText>(R.id.inputMeetingTitle)
+        val locationInput = dialogView.findViewById<EditText>(R.id.inputLocation)
+        val timeInput = dialogView.findViewById<EditText>(R.id.inputTime)
+
+        val calendar = Calendar.getInstance()
+
+        timeInput.setOnClickListener {
+
+            val timePicker = TimePickerDialog(
+                requireContext(),
+                { _, hour, minute ->
+
+                    val time = "$hour:$minute"
+                    timeInput.setText(time)
+
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            )
+
+            timePicker.show()
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Nueva reunión")
+            .setView(dialogView)
+            .setPositiveButton("Guardar") { _, _ ->
+
+                val title = titleInput.text.toString()
+                val location = locationInput.text.toString()
+                val time = timeInput.text.toString()
+
+                addMeeting(title, location, time)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment ScheduleFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            ScheduleFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
+    private fun addMeeting(title: String, location: String, time: String) {
+
+        val meeting = hashMapOf(
+
+            "title" to title,
+            "location" to location,
+            "time" to time,
+            "date" to selectedDate
+        )
+
+        db.collection("meetings")
+            .add(meeting)
+            .addOnSuccessListener {
+
+                Toast.makeText(context,"Evento guardado",Toast.LENGTH_SHORT).show()
+                loadMeetings(selectedDate)
+
+            }
+    }
+
+    private fun loadMeetings(date: String) {
+
+        db.collection("meetings")
+            .whereEqualTo("date",date)
+            .get()
+            .addOnSuccessListener { documents ->
+
+                meetingList.clear()
+
+                for(doc in documents){
+
+                    val title = doc.getString("title")
+                    val time = doc.getString("time")
+                    val location = doc.getString("location")
+
+                    meetingList.add("$time - $title\n$location")
                 }
+
+                adapter.notifyDataSetChanged()
             }
     }
 }
