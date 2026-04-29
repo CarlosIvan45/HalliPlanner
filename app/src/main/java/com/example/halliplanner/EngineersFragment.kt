@@ -56,6 +56,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
 
         engineerList.adapter = adapter
         engineerList.emptyView = txtEngineerEmpty
+        ListScrollHelper.enableNestedScrolling(engineerList)
 
         btnAddEngineer.setOnClickListener { showEngineerDialog() }
         inputEngineerSearch.addTextChangedListener(simpleWatcher { applyEngineerSearch() })

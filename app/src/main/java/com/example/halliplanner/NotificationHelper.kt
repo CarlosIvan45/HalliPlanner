@@ -11,16 +11,16 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 object NotificationHelper {
-    private const val CHANNEL_ID = "halli_completion_alerts"
+    private const val CHANNEL_ID = "halli_operational_alerts"
 
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Alertas de finalizacion",
+                "Alertas operativas",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Avisos cuando una actividad u operacion finaliza."
+                description = "Avisos de vencimientos, reuniones y finalizaciones."
             }
             context.getSystemService(NotificationManager::class.java)
                 .createNotificationChannel(channel)

@@ -65,6 +65,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         adapter = MeetingAdapter(meetingList)
         meetingListView.adapter = adapter
         meetingListView.emptyView = txtMeetingEmpty
+        ListScrollHelper.enableNestedScrolling(meetingListView)
 
         val calendar = Calendar.getInstance()
         selectedDate = formatDate(
@@ -161,9 +162,72 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             "time" to time,
             "date" to selectedDate,
             "updatedBy" to auth.currentUser?.uid.orEmpty(),
+            "updatedByEmail" to auth.currentUser?.email.orEmpty(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
+        validateMeetingAvailability(meetingId, attendees, time) {
+            saveMeetingData(meetingId, meeting)
+        }
+    }
+
+    private fun validateMeetingAvailability(
+        meetingId: String?,
+        attendees: String,
+        time: String,
+        onAvailable: () -> Unit
+    ) {
+        val selected = AvailabilityHelper.namesFromText(attendees)
+        if (selected.isEmpty() || time.isBlank()) {
+            onAvailable()
+            return
+        }
+
+        db.collection("meetings")
+            .whereEqualTo("date", selectedDate)
+            .get()
+            .addOnSuccessListener { meetings ->
+                val meetingConflict = meetings.firstOrNull { doc ->
+                    doc.id != meetingId &&
+                        doc.getString("time").orEmpty() == time &&
+                        AvailabilityHelper.namesFromText(doc.getString("attendees").orEmpty()).any { it in selected }
+                }
+                if (meetingConflict != null) {
+                    val title = meetingConflict.getString("title").orEmpty().ifBlank { "otra reunion" }
+                    Toast.makeText(context, "Disponibilidad bloqueada: hay asistentes en $title a la misma hora.", Toast.LENGTH_LONG).show()
+                    return@addOnSuccessListener
+                }
+
+                db.collection("operations")
+                    .get()
+                    .addOnSuccessListener { operations ->
+                        val operationConflict = operations.firstOrNull { doc ->
+                            doc.getString("status") != "Completada" &&
+                                (doc.get("engineerNames") as? List<*>).orEmpty()
+                                    .map { AvailabilityHelper.normalizeName(it.toString()) }
+                                    .any { it in selected } &&
+                                AvailabilityHelper.dateTimeInsideRange(
+                                    selectedDate,
+                                    time,
+                                    doc.getString("startDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                                    doc.getString("startTime").orEmpty(),
+                                    doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                                    doc.getString("endTime").orEmpty()
+                                )
+                        }
+                        if (operationConflict == null) {
+                            onAvailable()
+                        } else {
+                            val title = operationConflict.getString("title").orEmpty().ifBlank { "una operacion" }
+                            Toast.makeText(context, "Disponibilidad bloqueada: hay asistentes asignados a $title en ese horario.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                    .addOnFailureListener { showFirestoreError("No se pudo validar operaciones", it) }
+            }
+            .addOnFailureListener { showFirestoreError("No se pudo validar reuniones", it) }
+    }
+
+    private fun saveMeetingData(meetingId: String?, meeting: HashMap<String, Any>) {
         if (meetingId == null) {
             meeting["createdBy"] = auth.currentUser?.uid.orEmpty()
             meeting["createdByEmail"] = auth.currentUser?.email.orEmpty()
@@ -205,7 +269,8 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                             operation = doc.getString("operation").orEmpty(),
                             location = doc.getString("location").orEmpty(),
                             attendees = doc.getString("attendees").orEmpty(),
-                            time = doc.getString("time").orEmpty()
+                            time = doc.getString("time").orEmpty(),
+                            audit = AuditFormatter.fromDocument(doc)
                         )
                     )
                     meetingIds.add(doc.id)
@@ -348,6 +413,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                 "${meeting.operation.ifBlank { "Tema general" }} | ${meeting.location.ifBlank { "Sin lugar" }}"
             row.findViewById<TextView>(R.id.txtMeetingPeople).text =
                 "Asistentes: ${meeting.attendees.ifBlank { "Sin asignar" }}"
+            row.findViewById<TextView>(R.id.txtMeetingAudit).text = meeting.audit
             row.findViewById<MaterialButton>(R.id.btnEditMeeting).setOnClickListener {
                 val index = meetingList.indexOf(meeting)
                 if (index >= 0) {
@@ -370,7 +436,8 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         val operation: String,
         val location: String,
         val attendees: String,
-        val time: String
+        val time: String,
+        val audit: String
     )
 
     private enum class RangeMode {

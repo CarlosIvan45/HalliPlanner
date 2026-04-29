@@ -75,6 +75,7 @@ class TasksFragment : Fragment() {
         adapter = TaskAdapter(filteredTaskList)
         taskListView.adapter = adapter
         taskListView.emptyView = txtTaskEmpty
+        ListScrollHelper.enableNestedScrolling(taskListView)
         setupFilters()
 
         loadTasks()
@@ -133,7 +134,8 @@ class TasksFragment : Fragment() {
                             endTime = document.getString("endTime").orEmpty(),
                             priority = document.getString("priority").orEmpty(),
                             status = document.getString("status").orEmpty(),
-                            operation = document.getString("operation").orEmpty()
+                            operation = document.getString("operation").orEmpty(),
+                            audit = AuditFormatter.fromDocument(document)
                         )
                     )
                     taskIds.add(document.id)
@@ -263,6 +265,7 @@ class TasksFragment : Fragment() {
             "status" to status,
             "operation" to operation,
             "updatedBy" to auth.currentUser?.uid.orEmpty(),
+            "updatedByEmail" to auth.currentUser?.email.orEmpty(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
@@ -381,6 +384,7 @@ class TasksFragment : Fragment() {
                 "${task.status.ifBlank { "Pendiente" }} | ${task.date.ifBlank { "Sin fecha" }} | ${task.operation.ifBlank { "Operacion general" }}"
             row.findViewById<TextView>(R.id.txtTaskPeople).text =
                 "Responsables: ${task.assignedTo.ifBlank { "Sin asignar" }}\nInicio: ${task.startDate.ifBlank { "Sin fecha" }} ${task.startTime.ifBlank { "" }}\nTermino: ${task.endDate.ifBlank { task.date.ifBlank { "Sin fecha" } }} ${task.endTime.ifBlank { "" }}"
+            row.findViewById<TextView>(R.id.txtTaskAudit).text = task.audit
             row.findViewById<MaterialButton>(R.id.btnEditTask).setOnClickListener {
                 val index = filteredTaskList.indexOf(task)
                 if (index >= 0) {
@@ -409,7 +413,8 @@ class TasksFragment : Fragment() {
         val endTime: String,
         val priority: String,
         val status: String,
-        val operation: String
+        val operation: String,
+        val audit: String
     )
 
     private fun applyTaskFilters() {
@@ -440,7 +445,8 @@ class TasksFragment : Fragment() {
             "${task.title.ifBlank { "Sin titulo" }} | ${task.status.ifBlank { "Pendiente" }} | Prioridad ${task.priority.ifBlank { "Media" }} | Responsable: ${task.assignedTo.ifBlank { "Sin asignar" }} | Termino: ${task.endDate.ifBlank { task.date.ifBlank { "Sin fecha" } }} ${task.endTime}"
         }
         val file = PdfReportExporter.export(requireContext(), "Reporte de actividades", rows)
-        Toast.makeText(context, "PDF exportado: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF guardado en ${file.displayPath}", Toast.LENGTH_LONG).show()
+        PdfReportExporter.share(requireContext(), file)
     }
 
     private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {

@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_title_pastel"
             android:padding="14dp"
-            android:text="Tareas y operaciones"
+            android:text="Operaciones Generales"
             android:gravity="center"
             android:textColor="@color/planner_text"
             android:textSize="26sp"
@@ -160,7 +160,8 @@
             android:cacheColorHint="@android:color/transparent"
             android:clipToPadding="false"
             android:divider="@android:color/transparent"
-            android:dividerHeight="8dp" />
+            android:dividerHeight="8dp"
+            android:nestedScrollingEnabled="true" />
 
         <TextView
             android:id="@+id/txtTaskEmpty"

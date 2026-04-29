@@ -14,7 +14,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:translationY="-28dp">
 
         <TextView
             android:layout_width="match_parent"
@@ -22,7 +23,7 @@
             android:text="HalliPlanner"
             android:gravity="center"
             android:textColor="@color/planner_primary"
-            android:textSize="32sp"
+            android:textSize="42sp"
             android:textStyle="bold" />
 
         <TextView
@@ -31,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:layout_marginBottom="24dp"
-            android:text="Inicia sesion para organizar tareas, operaciones y reuniones."
+            android:text="Inicie sesion para consultar su agenda."
             android:gravity="center"
             android:textColor="@color/planner_muted"
             android:textSize="15sp" />

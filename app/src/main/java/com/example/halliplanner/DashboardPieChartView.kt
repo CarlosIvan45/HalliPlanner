@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.View
 import androidx.core.content.ContextCompat
 import kotlin.math.cos
@@ -38,9 +39,10 @@ class DashboardPieChartView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val size = width.coerceAtMost(height).toFloat()
-        val left = (width - size) / 2f + 8f
-        val top = (height - size) / 2f + 8f
-        bounds.set(left, top, left + size - 16f, top + size - 16f)
+        val inset = 10f
+        val left = (width - size) / 2f + inset
+        val top = (height - size) / 2f + inset
+        bounds.set(left, top, left + size - inset * 2f, top + size - inset * 2f)
 
         val colors = listOf(
             ContextCompat.getColor(context, R.color.planner_primary),
@@ -49,7 +51,8 @@ class DashboardPieChartView @JvmOverloads constructor(
         )
         val total = values.sum()
         var startAngle = -90f
-        val labelRadius = bounds.width() * 0.32f
+        val labelRadius = bounds.width() * 0.36f
+        val labels = mutableListOf<ChartLabel>()
 
         values.forEachIndexed { index, value ->
             val sweep = (value / total) * 360f
@@ -61,16 +64,31 @@ class DashboardPieChartView @JvmOverloads constructor(
                 val angle = Math.toRadians((startAngle + sweep / 2f).toDouble())
                 val x = bounds.centerX() + (cos(angle) * labelRadius).toFloat()
                 val y = bounds.centerY() + (sin(angle) * labelRadius).toFloat()
-                textPaint.color = ContextCompat.getColor(context, R.color.white)
-                textPaint.textAlign = Paint.Align.CENTER
-                textPaint.textSize = 24f
-                textPaint.typeface = Typeface.DEFAULT_BOLD
-                canvas.drawText("$percent%", x, y + 8f, textPaint)
+                labels.add(ChartLabel("$percent%", x, y))
             }
             startAngle += sweep
         }
 
         paint.color = ContextCompat.getColor(context, R.color.planner_surface)
         canvas.drawCircle(bounds.centerX(), bounds.centerY(), bounds.width() * 0.28f, paint)
+
+        textPaint.color = ContextCompat.getColor(context, R.color.white)
+        textPaint.textAlign = Paint.Align.CENTER
+        textPaint.textSize = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_SP,
+            15f,
+            resources.displayMetrics
+        )
+        textPaint.typeface = Typeface.DEFAULT_BOLD
+        val textCenterOffset = -(textPaint.fontMetrics.ascent + textPaint.fontMetrics.descent) / 2f
+        labels.forEach { label ->
+            canvas.drawText(label.text, label.x, label.y + textCenterOffset, textPaint)
+        }
     }
+
+    private data class ChartLabel(
+        val text: String,
+        val x: Float,
+        val y: Float
+    )
 }

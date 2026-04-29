@@ -114,7 +114,8 @@
             android:cacheColorHint="@android:color/transparent"
             android:clipToPadding="false"
             android:divider="@android:color/transparent"
-            android:dividerHeight="8dp" />
+            android:dividerHeight="8dp"
+            android:nestedScrollingEnabled="true" />
 
         <TextView
             android:id="@+id/txtOperationEmpty"

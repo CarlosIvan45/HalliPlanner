@@ -27,6 +27,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var txtHomeFocus: TextView
     private lateinit var txtHomeFocusDetail: TextView
     private lateinit var txtExecutiveList: TextView
+    private lateinit var txtExecutiveRisks: TextView
+    private lateinit var txtExecutiveOperations: TextView
+    private lateinit var txtExecutiveMeetings: TextView
+    private lateinit var txtExecutiveWorkload: TextView
+    private lateinit var txtExecutiveTasks: TextView
     private lateinit var txtPieSummary: TextView
     private lateinit var txtHomeAlerts: TextView
     private lateinit var txtOperationsChartLabel: TextView
@@ -40,6 +45,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private var operationsLine = "Operaciones: sin registros"
     private var meetingsLine = "Reuniones hoy: 0"
     private var tasksLine = "Actividades: sin registros"
+    private var workloadLine = "Carga de ingenieros: sin asignaciones"
+    private var overdueOperationsCount = 0
+    private var overdueTasksCount = 0
     private var activeOperationsCount = 0
     private var openTasksCount = 0
     private var todayMeetingsCount = 0
@@ -60,6 +68,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         txtHomeFocus = view.findViewById(R.id.txtHomeFocus)
         txtHomeFocusDetail = view.findViewById(R.id.txtHomeFocusDetail)
         txtExecutiveList = view.findViewById(R.id.txtHomeExecutiveList)
+        txtExecutiveRisks = view.findViewById(R.id.txtExecutiveRisks)
+        txtExecutiveOperations = view.findViewById(R.id.txtExecutiveOperations)
+        txtExecutiveMeetings = view.findViewById(R.id.txtExecutiveMeetings)
+        txtExecutiveWorkload = view.findViewById(R.id.txtExecutiveWorkload)
+        txtExecutiveTasks = view.findViewById(R.id.txtExecutiveTasks)
         txtPieSummary = view.findViewById(R.id.txtPieSummary)
         txtHomeAlerts = view.findViewById(R.id.txtHomeAlerts)
         txtOperationsChartLabel = view.findViewById(R.id.txtOperationsChartLabel)
@@ -107,6 +120,13 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val total = documents.size()
                 val active = documents.count { it.getString("status") != "Completada" }
                 val completed = documents.count { it.getString("status") == "Completada" }
+                overdueOperationsCount = documents.count { doc ->
+                    doc.getString("status") != "Completada" &&
+                        isOverdue(
+                            doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                            doc.getString("endTime").orEmpty()
+                        )
+                }
                 val totalRevenue = documents
                     .filter { it.getString("type") == "Pozo" }
                     .sumOf { it.getDouble("revenue") ?: 0.0 }
@@ -135,6 +155,23 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     }
                     "Operaciones destacadas:\n$sample"
                 }
+                val workload = mutableMapOf<String, Int>()
+                documents
+                    .filter { it.getString("status") != "Completada" }
+                    .forEach { doc ->
+                        (doc.get("engineerNames") as? List<*>).orEmpty()
+                            .map { it.toString() }
+                            .filter { it.isNotBlank() }
+                            .forEach { name -> workload[name] = (workload[name] ?: 0) + 1 }
+                    }
+                workloadLine = if (workload.isEmpty()) {
+                    "Carga de ingenieros: sin asignaciones activas"
+                } else {
+                    "Carga de ingenieros:\n" + workload.entries
+                        .sortedByDescending { it.value }
+                        .take(5)
+                        .joinToString("\n") { "${it.key}: ${it.value} asignaciones" }
+                }
                 documents
                     .filter { it.getString("status") == "Completada" }
                     .forEach { doc ->
@@ -152,6 +189,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                             val title = doc.getString("title").orEmpty().ifBlank { "Operacion sin nombre" }
                             completedAlerts["due-operation:${doc.id}"] =
                                 "Operacion por vencer: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
+                        }
+                        if (isOverdue(endDate, endTime)) {
+                            val title = doc.getString("title").orEmpty().ifBlank { "Operacion sin nombre" }
+                            completedAlerts["overdue-operation:${doc.id}"] =
+                                "Operacion atrasada: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
                         }
                     }
                 renderAlerts()
@@ -188,6 +230,12 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     }
                     "Reuniones hoy: ${documents.size()}\n$sample"
                 }
+                documents.forEach { doc ->
+                    val title = doc.getString("title").orEmpty().ifBlank { "Reunion sin titulo" }
+                    val time = doc.getString("time").orEmpty().ifBlank { "--:--" }
+                    completedAlerts["meeting-today:${doc.id}"] = "Reunion de hoy: $time | $title"
+                }
+                renderAlerts()
                 renderExecutiveList()
             }
             .addOnFailureListener { error ->
@@ -203,6 +251,13 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val total = documents.size()
                 val pending = documents.count { it.getString("status") != "Completada" }
                 val progress = documents.count { it.getString("status") == "En progreso" }
+                overdueTasksCount = documents.count { doc ->
+                    doc.getString("status") != "Completada" &&
+                        isOverdue(
+                            doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                            doc.getString("endTime").orEmpty()
+                        )
+                }
 
                 txtTasksCount.text = pending.toString()
                 openTasksCount = pending
@@ -241,6 +296,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                             completedAlerts["due-task:${doc.id}"] =
                                 "Actividad por vencer: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
                         }
+                        if (isOverdue(endDate, endTime)) {
+                            val title = doc.getString("title").orEmpty().ifBlank { "Actividad sin titulo" }
+                            completedAlerts["overdue-task:${doc.id}"] =
+                                "Actividad atrasada: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
+                        }
                     }
                 renderAlerts()
                 renderExecutiveList()
@@ -270,8 +330,14 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun renderExecutiveList() {
+        txtExecutiveRisks.text =
+            "Riesgos\n$overdueOperationsCount operaciones atrasadas | $overdueTasksCount actividades atrasadas"
+        txtExecutiveOperations.text = operationsLine
+        txtExecutiveMeetings.text = meetingsLine
+        txtExecutiveWorkload.text = workloadLine
+        txtExecutiveTasks.text = tasksLine
         txtExecutiveList.text =
-            "$operationsLine\n\nAgenda de hoy:\n$meetingsLine\n\nSeguimiento:\n$tasksLine"
+            "$operationsLine\n\nRiesgos: $overdueOperationsCount operaciones atrasadas | $overdueTasksCount actividades atrasadas\n\n$workloadLine\n\nAgenda de hoy:\n$meetingsLine\n\nSeguimiento:\n$tasksLine"
     }
 
     private fun renderAlerts() {
@@ -325,6 +391,11 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         val now = System.currentTimeMillis()
         val next24Hours = now + 24L * 60L * 60L * 1000L
         return dueAt in now..next24Hours
+    }
+
+    private fun isOverdue(date: String, time: String): Boolean {
+        val dueAt = parseDateTime(date, time) ?: return false
+        return dueAt < System.currentTimeMillis()
     }
 
     private fun parseDateTime(date: String, time: String): Long? {

@@ -70,6 +70,7 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
 
         operationList.adapter = adapter
         operationList.emptyView = txtOperationEmpty
+        ListScrollHelper.enableNestedScrolling(operationList)
         setupFilters()
 
         btnAddOperation.setOnClickListener { showOperationDialog() }
@@ -152,7 +153,8 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                         description = doc.getString("description").orEmpty(),
                         revenue = doc.getDouble("revenue") ?: 0.0,
                         engineerIds = engineerIds.map { it.toString() },
-                        engineerNames = engineerNames.map { it.toString() }
+                        engineerNames = engineerNames.map { it.toString() },
+                        audit = AuditFormatter.fromDocument(doc)
                     )
                     operations.add(operation)
                     operationIds.add(doc.id)
@@ -299,32 +301,93 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                     "engineerIds" to selectedEngineers.map { it.id },
                     "engineerNames" to selectedEngineers.map { it.name },
                     "updatedBy" to auth.currentUser?.uid.orEmpty(),
+                    "updatedByEmail" to auth.currentUser?.email.orEmpty(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
 
-                if (operation == null) {
-                    data["createdBy"] = auth.currentUser?.uid.orEmpty()
-                    data["createdAt"] = FieldValue.serverTimestamp()
-                    db.collection("operations")
-                        .add(data)
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Operacion creada", Toast.LENGTH_SHORT).show()
-                            loadOperations()
-                        }
-                        .addOnFailureListener { showError("No se pudo guardar", it) }
-                } else {
-                    db.collection("operations").document(operation.id)
-                        .set(data)
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Operacion actualizada", Toast.LENGTH_SHORT).show()
-                            loadOperations()
-                        }
-                        .addOnFailureListener { showError("No se pudo actualizar", it) }
+                validateOperationAvailability(
+                    operation?.id,
+                    selectedEngineers.map { it.name },
+                    startDateInput.text.toString().trim().ifBlank { dateInput.text.toString().trim() },
+                    startTimeInput.text.toString().trim(),
+                    endDateInput.text.toString().trim().ifBlank { dateInput.text.toString().trim() },
+                    endTimeInput.text.toString().trim()
+                ) {
+                    saveOperationData(operation, data)
                 }
             }
             .setNegativeButton("Cancelar", null)
             .show()
             .also { DialogStyle.apply(it) }
+    }
+
+    private fun validateOperationAvailability(
+        operationId: String?,
+        selectedNames: List<String>,
+        startDate: String,
+        startTime: String,
+        endDate: String,
+        endTime: String,
+        onAvailable: () -> Unit
+    ) {
+        val selected = selectedNames.map { AvailabilityHelper.normalizeName(it) }.toSet()
+        if (selected.isEmpty() || startDate.isBlank()) {
+            onAvailable()
+            return
+        }
+
+        db.collection("operations")
+            .get()
+            .addOnSuccessListener { docs ->
+                val conflict = docs.firstOrNull { doc ->
+                    doc.id != operationId &&
+                        doc.getString("status") != "Completada" &&
+                        (doc.get("engineerNames") as? List<*>).orEmpty()
+                            .map { AvailabilityHelper.normalizeName(it.toString()) }
+                            .any { it in selected } &&
+                        AvailabilityHelper.rangesOverlap(
+                            startDate,
+                            startTime,
+                            endDate,
+                            endTime,
+                            doc.getString("startDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                            doc.getString("startTime").orEmpty(),
+                            doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() },
+                            doc.getString("endTime").orEmpty()
+                        )
+                }
+
+                if (conflict == null) {
+                    onAvailable()
+                } else {
+                    val title = conflict.getString("title").orEmpty().ifBlank { "otra operacion" }
+                    Toast.makeText(context, "Disponibilidad bloqueada: hay ingenieros asignados a $title en ese horario.", Toast.LENGTH_LONG).show()
+                }
+            }
+            .addOnFailureListener { showError("No se pudo validar disponibilidad", it) }
+    }
+
+    private fun saveOperationData(operation: Operation?, data: HashMap<String, Any>) {
+        if (operation == null) {
+            data["createdBy"] = auth.currentUser?.uid.orEmpty()
+            data["createdByEmail"] = auth.currentUser?.email.orEmpty()
+            data["createdAt"] = FieldValue.serverTimestamp()
+            db.collection("operations")
+                .add(data)
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Operacion creada", Toast.LENGTH_SHORT).show()
+                    loadOperations()
+                }
+                .addOnFailureListener { showError("No se pudo guardar", it) }
+        } else {
+            db.collection("operations").document(operation.id)
+                .set(data)
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Operacion actualizada", Toast.LENGTH_SHORT).show()
+                    loadOperations()
+                }
+                .addOnFailureListener { showError("No se pudo actualizar", it) }
+        }
     }
 
     private fun confirmDeleteOperation(operation: Operation) {
@@ -399,6 +462,7 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             }
             row.findViewById<TextView>(R.id.txtOperationEngineers).text =
                 "Ingenieros: ${operation.engineerNames.joinToString(", ").ifBlank { "Sin asignar" }}"
+            row.findViewById<TextView>(R.id.txtOperationAudit).text = operation.audit
             row.findViewById<MaterialButton>(R.id.btnEditOperation).setOnClickListener {
                 showOperationDialog(operation)
             }
@@ -424,7 +488,8 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
         val description: String,
         val revenue: Double,
         val engineerIds: List<String>,
-        val engineerNames: List<String>
+        val engineerNames: List<String>,
+        val audit: String
     )
 
     companion object {
@@ -458,7 +523,8 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             "${operation.title.ifBlank { "Operacion sin nombre" }} | ${operation.type.ifBlank { "General" }} | ${operation.status.ifBlank { "Planeada" }} | Ubicacion: ${operation.location.ifBlank { "Sin ubicacion" }} | Termino: ${operation.endDate.ifBlank { "Sin fecha" }} ${operation.endTime} | Ingenieros: ${operation.engineerNames.joinToString(", ").ifBlank { "Sin asignar" }}"
         }
         val file = PdfReportExporter.export(requireContext(), "Reporte de operaciones", rows)
-        Toast.makeText(context, "PDF exportado: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "PDF guardado en ${file.displayPath}", Toast.LENGTH_LONG).show()
+        PdfReportExporter.share(requireContext(), file)
     }
 
     private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {

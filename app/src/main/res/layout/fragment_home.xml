@@ -278,8 +278,8 @@
 
                 <com.example.halliplanner.DashboardPieChartView
                     android:id="@+id/pieDashboard"
-                    android:layout_width="138dp"
-                    android:layout_height="138dp" />
+                    android:layout_width="168dp"
+                    android:layout_height="168dp" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -402,48 +402,94 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
-            android:layout_marginBottom="8dp"
-            android:text="Agenda ejecutiva"
-            android:textColor="@color/planner_text"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/planner_surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/planner_line"
-            app:strokeWidth="1dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Agenda Ejecutiva"
+                android:textColor="@color/planner_text"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtExecutiveRisks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_metric_primary"
+                android:padding="14dp"
+                android:text="Riesgos: sin informacion"
+                android:textColor="@color/planner_text"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:layout_marginTop="12dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal">
 
                 <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Resumen profesional"
+                    android:id="@+id/txtExecutiveOperations"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@color/planner_surface"
+                    android:padding="14dp"
+                    android:text="Operaciones"
                     android:textColor="@color/planner_text"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textSize="13sp" />
 
                 <TextView
-                    android:id="@+id/txtHomeExecutiveList"
+                    android:id="@+id/txtExecutiveMeetings"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1"
+                    android:background="@color/planner_surface_soft"
+                    android:padding="14dp"
+                    android:text="Agenda de hoy"
+                    android:textColor="@color/planner_text"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/txtExecutiveWorkload"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@color/planner_surface"
+                android:padding="14dp"
+                android:text="Carga de ingenieros"
+                android:textColor="@color/planner_text"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/txtExecutiveTasks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@color/planner_surface"
+                android:padding="14dp"
+                android:text="Seguimiento"
+                android:textColor="@color/planner_text"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/txtHomeExecutiveList"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
+                android:visibility="gone"
                     android:text="Sin informacion operativa."
                     android:textColor="@color/planner_muted"
                     android:textSize="14sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

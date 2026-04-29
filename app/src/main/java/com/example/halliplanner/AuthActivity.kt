@@ -85,7 +85,7 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun login() {
-        val email = inputEmail.text.toString().trim()
+        val email = normalizeEmail(inputEmail.text.toString())
         val password = inputPassword.text.toString()
 
         if (!validateEmail(email) || password.isBlank()) {
@@ -108,7 +108,7 @@ class AuthActivity : AppCompatActivity() {
 
     private fun register() {
         val name = inputName.text.toString().trim()
-        val email = inputEmail.text.toString().trim()
+        val email = normalizeEmail(inputEmail.text.toString())
         val password = inputPassword.text.toString()
 
         if (name.isBlank() || !validateEmail(email) || password.length < 6) {
@@ -152,7 +152,7 @@ class AuthActivity : AppCompatActivity() {
     }
 
     private fun sendPasswordReset() {
-        val email = inputEmail.text.toString().trim()
+        val email = normalizeEmail(inputEmail.text.toString())
 
         if (!validateEmail(email)) {
             Toast.makeText(this, "Ingresa tu correo", Toast.LENGTH_SHORT).show()
@@ -160,20 +160,7 @@ class AuthActivity : AppCompatActivity() {
         }
 
         setLoading(true)
-        auth.fetchSignInMethodsForEmail(email)
-            .addOnSuccessListener {
-                val methods = it.signInMethods.orEmpty()
-                if (methods.isEmpty()) {
-                    setLoading(false)
-                    Toast.makeText(this, "No existe una cuenta registrada con ese correo.", Toast.LENGTH_LONG).show()
-                } else {
-                    sendResetEmail(email)
-                }
-            }
-            .addOnFailureListener {
-                setLoading(false)
-                showAuthError("No se pudo validar el correo", it)
-            }
+        sendResetEmail(email)
     }
 
     private fun sendResetEmail(email: String) {
@@ -246,6 +233,10 @@ class AuthActivity : AppCompatActivity() {
 
     private fun validateEmail(email: String): Boolean {
         return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
+    private fun normalizeEmail(email: String): String {
+        return email.trim().lowercase()
     }
 
     private fun openPlanner() {
