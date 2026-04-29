@@ -1,105 +1,119 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="16dp"
-    android:background="#F5F5F5"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/planner_background"
+    android:paddingStart="24dp"
+    android:paddingTop="26dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="26dp">
 
     <LinearLayout
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
 
-        <!-- Avatar -->
         <com.google.android.material.card.MaterialCardView
-            android:layout_width="120dp"
-            android:layout_height="120dp"
-            app:cardCornerRadius="60dp"
-            app:cardElevation="4dp">
+            android:layout_width="104dp"
+            android:layout_height="104dp"
+            android:layout_marginTop="12dp"
+            app:cardBackgroundColor="@color/planner_primary"
+            app:cardCornerRadius="52dp"
+            app:cardElevation="0dp">
 
-            <ImageView
+            <TextView
+                android:id="@+id/txtProfileInitial"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@android:drawable/ic_menu_myplaces"/>
-
+                android:gravity="center"
+                android:text="H"
+                android:textColor="@color/white"
+                android:textSize="38sp"
+                android:textStyle="bold" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Nombre -->
         <TextView
-            android:text="Juan Pérez"
+            android:id="@+id/txtProfileName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Usuario"
+            android:textColor="@color/planner_text"
             android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginTop="12dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:textStyle="bold" />
 
-        <!-- Rol -->
         <TextView
-            android:text="Gerente de proyectos"
-            android:textColor="#777"
-            android:layout_marginBottom="20dp"
+            android:id="@+id/txtProfileRole"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp"
+            android:text="Operaciones"
+            android:textColor="@color/planner_muted" />
 
-        <!-- Información del usuario -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="3dp">
+            android:layout_marginBottom="14dp"
+            app:cardBackgroundColor="@color/planner_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/planner_line"
+            app:strokeWidth="1dp">
 
             <LinearLayout
-                android:orientation="vertical"
-                android:padding="16dp"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="Correo"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/txtProfileEmail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
                     android:text="usuario@empresa.com"
-                    android:textColor="#666"
-                    android:layout_marginBottom="8dp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:textColor="@color/planner_muted" />
 
                 <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:text="Departamento"
-                    android:textStyle="bold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
 
                 <TextView
-                    android:text="Tecnología"
-                    android:textColor="#666"
+                    android:id="@+id/txtProfileDepartment"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
-
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Operaciones"
+                    android:textColor="@color/planner_muted" />
             </LinearLayout>
-
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Opciones -->
         <com.google.android.material.button.MaterialButton
-            android:text="Configuración"
+            android:id="@+id/btnEditProfile"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="10dp"
+            android:text="Personalizar perfil" />
 
         <com.google.android.material.button.MaterialButton
-            android:text="Cerrar sesión"
+            android:id="@+id/btnLogout"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
+            android:layout_height="wrap_content"
+            android:text="Cerrar sesion" />
     </LinearLayout>
-
 </ScrollView>

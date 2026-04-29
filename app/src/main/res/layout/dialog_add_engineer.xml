@@ -10,42 +10,40 @@
         android:orientation="vertical">
 
         <EditText
-            android:id="@+id/inputMeetingTitle"
+            android:id="@+id/inputEngineerName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Titulo de la reunion"
-            android:inputType="textCapSentences" />
+            android:hint="Nombre del ingeniero"
+            android:inputType="textCapWords" />
+
+        <Spinner
+            android:id="@+id/inputEngineerType"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp" />
 
         <EditText
-            android:id="@+id/inputMeetingOperation"
+            android:id="@+id/inputEngineerSpecialty"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Operacion o tema"
+            android:hint="Especialidad"
             android:inputType="textCapWords" />
 
         <EditText
-            android:id="@+id/inputLocation"
+            android:id="@+id/inputEngineerEmail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Lugar o enlace"
-            android:inputType="textCapSentences" />
+            android:hint="Correo"
+            android:inputType="textEmailAddress" />
 
         <EditText
-            android:id="@+id/inputAttendees"
+            android:id="@+id/inputEngineerPhone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Asistentes separados por coma"
-            android:inputType="textCapWords" />
-
-        <EditText
-            android:id="@+id/inputTime"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:focusable="false"
-            android:hint="Hora" />
+            android:hint="Telefono"
+            android:inputType="phone" />
     </LinearLayout>
 </ScrollView>

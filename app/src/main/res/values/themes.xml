@@ -1,9 +1,31 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.HalliPlanner" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/planner_primary</item>
+        <item name="colorPrimaryVariant">@color/planner_primary_dark</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/planner_background</item>
+        <item name="android:navigationBarColor">@color/planner_surface</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:colorAccent">@color/planner_primary</item>
     </style>
 
     <style name="Theme.HalliPlanner" parent="Base.Theme.HalliPlanner" />
+
+    <style name="Widget.HalliPlanner.NavigationIndicator" parent="">
+        <item name="android:color">@color/planner_accent_soft</item>
+    </style>
+
+    <style name="CalendarDateTextHalliPlanner">
+        <item name="android:textColor">@color/calendar_text</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="CalendarWeekTextHalliPlanner">
+        <item name="android:textColor">@color/calendar_week_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>

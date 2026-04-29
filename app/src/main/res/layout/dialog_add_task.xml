@@ -1,60 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:padding="20dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:padding="24dp">
 
     <LinearLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
-        <!-- TITULO -->
         <EditText
             android:id="@+id/inputTitle"
-            android:hint="Título de la tarea"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:hint="Titulo de la tarea"
+            android:inputType="textCapSentences" />
 
-        <!-- DESCRIPCION -->
+        <EditText
+            android:id="@+id/inputOperation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Operacion o proyecto"
+            android:inputType="textCapWords" />
+
         <EditText
             android:id="@+id/inputDescription"
-            android:hint="Descripción"
-            android:layout_marginTop="12dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Descripcion"
+            android:inputType="textMultiLine"
+            android:minLines="2" />
 
-        <!-- RESPONSABLE -->
         <EditText
             android:id="@+id/inputAssigned"
-            android:hint="Responsable"
-            android:layout_marginTop="12dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Responsables separados por coma"
+            android:inputType="textCapWords" />
 
-        <!-- FECHA LIMITE -->
         <EditText
             android:id="@+id/inputDate"
-            android:hint="Fecha límite"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:focusable="false"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:hint="Fecha limite" />
 
-        <!-- PRIORIDAD -->
         <Spinner
             android:id="@+id/inputPriority"
-            android:layout_marginTop="12dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp" />
 
-        <!-- ESTADO -->
         <Spinner
             android:id="@+id/inputStatus"
-            android:layout_marginTop="12dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp" />
     </LinearLayout>
-
 </ScrollView>

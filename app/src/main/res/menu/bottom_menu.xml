@@ -8,17 +8,27 @@
 
     <item
         android:id="@+id/nav_schedule"
-        android:title="Cronograma"
+        android:title="Agenda"
         android:icon="@android:drawable/ic_menu_my_calendar"/>
 
     <item
         android:id="@+id/nav_tasks"
-        android:title="Tareas"
+        android:title="Actividades"
         android:icon="@android:drawable/ic_menu_agenda"/>
+
+    <item
+        android:id="@+id/nav_operations"
+        android:title="Operaciones"
+        android:icon="@android:drawable/ic_menu_compass"/>
+
+    <item
+        android:id="@+id/nav_engineers"
+        android:title="Ingenieros"
+        android:icon="@android:drawable/ic_menu_manage"/>
 
     <item
         android:id="@+id/nav_profile"
         android:title="Perfil"
-        android:icon="@android:drawable/ic_menu_manage"/>
+        android:icon="@android:drawable/ic_menu_myplaces"/>
 
 </menu>

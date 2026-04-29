@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <EditText
+            android:id="@+id/inputOperationTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Nombre de la operacion"
+            android:inputType="textCapSentences" />
+
+        <Spinner
+            android:id="@+id/inputOperationType"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp" />
+
+        <EditText
+            android:id="@+id/inputOperationRevenue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Revenue del pozo"
+            android:inputType="numberDecimal"
+            android:visibility="gone" />
+
+        <EditText
+            android:id="@+id/inputOperationLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Ubicacion, sala o area"
+            android:inputType="textCapSentences" />
+
+        <EditText
+            android:id="@+id/inputOperationDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:hint="Fecha planeada" />
+
+        <Spinner
+            android:id="@+id/inputOperationStatus"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="12dp" />
+
+        <EditText
+            android:id="@+id/inputOperationDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Descripcion"
+            android:inputType="textMultiLine"
+            android:minLines="2" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSelectEngineers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="Asignar ingenieros" />
+
+        <TextView
+            android:id="@+id/txtSelectedEngineers"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Sin ingenieros asignados"
+            android:textColor="@color/planner_muted" />
+    </LinearLayout>
+</ScrollView>

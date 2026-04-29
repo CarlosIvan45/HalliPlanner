@@ -2,4 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="planner_background">#F7F8FA</color>
+    <color name="planner_surface">#FFFFFFFF</color>
+    <color name="planner_surface_soft">#F1F3F6</color>
+    <color name="planner_primary">#C8102E</color>
+    <color name="planner_primary_dark">#8F0B22</color>
+    <color name="planner_secondary">#384252</color>
+    <color name="planner_accent">#D63D53</color>
+    <color name="planner_accent_soft">#FDECEF</color>
+    <color name="planner_text">#1B2028</color>
+    <color name="planner_muted">#6E7682</color>
+    <color name="planner_line">#E1E5EA</color>
+    <color name="priority_high">#C81E2A</color>
+    <color name="priority_medium">#A87922</color>
+    <color name="priority_low">#3E8A5B</color>
+    <color name="calendar_text">#211A1C</color>
+    <color name="calendar_week_text">#75676B</color>
 </resources>

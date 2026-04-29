@@ -1,59 +1,126 @@
 package com.example.halliplanner
 
+import android.content.Intent
+import android.app.AlertDialog
 import android.os.Bundle
-import androidx.fragment.app.Fragment
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.TextView
+import android.widget.Toast
+import androidx.fragment.app.Fragment
+import com.google.android.material.button.MaterialButton
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
+class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
-/**
- * A simple [Fragment] subclass.
- * Use the [ProfileFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
-class ProfileFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
+    private lateinit var txtProfileInitial: TextView
+    private lateinit var txtProfileName: TextView
+    private lateinit var txtProfileRole: TextView
+    private lateinit var txtProfileEmail: TextView
+    private lateinit var txtProfileDepartment: TextView
+    private lateinit var btnEditProfile: MaterialButton
+    private lateinit var btnLogout: MaterialButton
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
+    private var currentName = ""
+    private var currentRole = ""
+    private var currentDepartment = ""
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
+        txtProfileInitial = view.findViewById(R.id.txtProfileInitial)
+        txtProfileName = view.findViewById(R.id.txtProfileName)
+        txtProfileRole = view.findViewById(R.id.txtProfileRole)
+        txtProfileEmail = view.findViewById(R.id.txtProfileEmail)
+        txtProfileDepartment = view.findViewById(R.id.txtProfileDepartment)
+        btnEditProfile = view.findViewById(R.id.btnEditProfile)
+        btnLogout = view.findViewById(R.id.btnLogout)
+
+        loadProfile()
+
+        btnEditProfile.setOnClickListener {
+            showEditProfileDialog()
+        }
+
+        btnLogout.setOnClickListener {
+            auth.signOut()
+            val intent = Intent(requireContext(), AuthActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
         }
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_profile, container, false)
+    private fun loadProfile() {
+        val user = auth.currentUser ?: return
+        txtProfileEmail.text = user.email ?: "Sin correo"
+
+        db.collection("users").document(user.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                val name = doc.getString("name").orEmpty().ifBlank { user.email ?: "Usuario" }
+                val role = doc.getString("role").orEmpty().ifBlank { "Usuario" }
+                val department = doc.getString("department").orEmpty().ifBlank { "Operaciones" }
+
+                currentName = name
+                currentRole = role
+                currentDepartment = department
+                txtProfileName.text = name
+                txtProfileRole.text = role
+                txtProfileDepartment.text = department
+                txtProfileInitial.text = name.firstOrNull()?.uppercase() ?: "H"
+            }
+            .addOnFailureListener {
+                val fallback = user.email ?: "Usuario"
+                currentName = fallback
+                currentRole = "Usuario"
+                currentDepartment = "Operaciones"
+                txtProfileName.text = fallback
+                txtProfileInitial.text = fallback.firstOrNull()?.uppercase() ?: "H"
+            }
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment ProfileFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            ProfileFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    private fun showEditProfileDialog() {
+        val user = auth.currentUser ?: return
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edit_profile, null)
+        val nameInput = dialogView.findViewById<EditText>(R.id.inputProfileName)
+        val roleInput = dialogView.findViewById<EditText>(R.id.inputProfileRole)
+        val departmentInput = dialogView.findViewById<EditText>(R.id.inputProfileDepartment)
+
+        nameInput.setText(currentName)
+        roleInput.setText(currentRole)
+        departmentInput.setText(currentDepartment)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Personalizar perfil")
+            .setView(dialogView)
+            .setPositiveButton("Guardar") { _, _ ->
+                val name = nameInput.text.toString().trim().ifBlank { user.email ?: "Usuario" }
+                val role = roleInput.text.toString().trim().ifBlank { "Usuario" }
+                val department = departmentInput.text.toString().trim().ifBlank { "Operaciones" }
+
+                val data = hashMapOf(
+                    "name" to name,
+                    "email" to (user.email ?: ""),
+                    "role" to role,
+                    "department" to department
+                )
+
+                db.collection("users").document(user.uid)
+                    .set(data)
+                    .addOnSuccessListener {
+                        Toast.makeText(context, "Perfil actualizado", Toast.LENGTH_SHORT).show()
+                        loadProfile()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(context, "No se pudo actualizar: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
             }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 }

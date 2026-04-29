@@ -10,42 +10,26 @@
         android:orientation="vertical">
 
         <EditText
-            android:id="@+id/inputMeetingTitle"
+            android:id="@+id/inputProfileName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Titulo de la reunion"
-            android:inputType="textCapSentences" />
-
-        <EditText
-            android:id="@+id/inputMeetingOperation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:hint="Operacion o tema"
+            android:hint="Nombre"
             android:inputType="textCapWords" />
 
         <EditText
-            android:id="@+id/inputLocation"
+            android:id="@+id/inputProfileRole"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:hint="Lugar o enlace"
-            android:inputType="textCapSentences" />
-
-        <EditText
-            android:id="@+id/inputAttendees"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:hint="Asistentes separados por coma"
+            android:hint="Rol"
             android:inputType="textCapWords" />
 
         <EditText
-            android:id="@+id/inputTime"
+            android:id="@+id/inputProfileDepartment"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:focusable="false"
-            android:hint="Hora" />
+            android:hint="Departamento"
+            android:inputType="textCapWords" />
     </LinearLayout>
 </ScrollView>

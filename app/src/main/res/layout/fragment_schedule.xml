@@ -1,70 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:padding="16dp"
-    android:background="#F5F5F5"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/planner_background"
+    android:fillViewport="true"
+    android:paddingStart="24dp"
+    android:paddingTop="26dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="26dp">
 
     <LinearLayout
-        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
-        <!-- TITULO -->
-        <TextView
-            android:text="Cronograma"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
 
         <TextView
-            android:text="Organiza reuniones y tareas del equipo"
-            android:textColor="#777"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Agenda"
+            android:gravity="center"
+            android:textColor="@color/planner_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txtSelectedDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:layout_marginBottom="16dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:text="Reuniones del dia"
+            android:gravity="center"
+            android:textColor="@color/planner_muted"
+            android:textSize="14sp" />
 
-        <!-- CALENDARIO -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            app:cardBackgroundColor="@color/white"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/planner_line"
+            app:strokeWidth="1dp">
 
             <CalendarView
                 android:id="@+id/calendarView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
+                android:layout_height="wrap_content"
+                android:background="@color/white"
+                android:dateTextAppearance="@style/CalendarDateTextHalliPlanner"
+                android:focusedMonthDateColor="@color/calendar_text"
+                android:selectedDateVerticalBar="@color/planner_primary"
+                android:showWeekNumber="false"
+                android:unfocusedMonthDateColor="@color/planner_muted"
+                android:weekDayTextAppearance="@style/CalendarWeekTextHalliPlanner"
+                android:weekSeparatorLineColor="@color/planner_line" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- EVENTOS DEL DIA -->
         <TextView
-            android:text="Eventos del día"
-            android:textSize="18sp"
-            android:textStyle="bold"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginBottom="8dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:text="Reuniones y bloqueos"
+            android:textColor="@color/planner_text"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <ListView
             android:id="@+id/meetingList"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:dividerHeight="8dp"/>
+            android:layout_height="320dp"
+            android:cacheColorHint="@android:color/transparent"
+            android:divider="@android:color/transparent"
+            android:dividerHeight="0dp" />
 
-        <!-- BOTON AGREGAR EVENTO -->
+        <TextView
+            android:id="@+id/txtMeetingEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="18dp"
+            android:text="No hay reuniones para esta fecha."
+            android:textColor="@color/planner_muted"
+            android:visibility="gone" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnAddMeeting"
-            android:text="Agregar evento"
-            android:layout_marginTop="16dp"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
-
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Planear reunion"
+            app:icon="@android:drawable/ic_menu_my_calendar" />
     </LinearLayout>
-
 </ScrollView>
