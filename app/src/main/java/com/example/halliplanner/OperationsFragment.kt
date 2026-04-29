@@ -2,7 +2,10 @@ package com.example.halliplanner
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -26,7 +29,9 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var operations: ArrayList<Operation>
+    private lateinit var filteredOperations: ArrayList<Operation>
     private lateinit var operationIds: ArrayList<String>
+    private lateinit var filteredOperationIds: ArrayList<String>
     private lateinit var engineers: ArrayList<EngineersFragment.Engineer>
     private lateinit var adapter: OperationAdapter
     private lateinit var operationList: ListView
@@ -34,7 +39,11 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
     private lateinit var txtOperationSummary: TextView
     private lateinit var txtOperationOpenCount: TextView
     private lateinit var txtOperationEngineerCount: TextView
+    private lateinit var inputOperationSearch: EditText
+    private lateinit var spinnerStatusFilter: Spinner
+    private lateinit var spinnerTypeFilter: Spinner
     private lateinit var btnAddOperation: MaterialButton
+    private lateinit var btnExportOperations: MaterialButton
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -42,33 +51,57 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
         operations = ArrayList()
+        filteredOperations = ArrayList()
         operationIds = ArrayList()
+        filteredOperationIds = ArrayList()
         engineers = ArrayList()
-        adapter = OperationAdapter(operations)
+        adapter = OperationAdapter(filteredOperations)
 
         operationList = view.findViewById(R.id.operationList)
         txtOperationEmpty = view.findViewById(R.id.txtOperationEmpty)
         txtOperationSummary = view.findViewById(R.id.txtOperationSummary)
         txtOperationOpenCount = view.findViewById(R.id.txtOperationOpenCount)
         txtOperationEngineerCount = view.findViewById(R.id.txtOperationEngineerCount)
+        inputOperationSearch = view.findViewById(R.id.inputOperationSearch)
+        spinnerStatusFilter = view.findViewById(R.id.spinnerOperationStatusFilter)
+        spinnerTypeFilter = view.findViewById(R.id.spinnerOperationTypeFilter)
         btnAddOperation = view.findViewById(R.id.btnAddOperation)
+        btnExportOperations = view.findViewById(R.id.btnExportOperations)
 
         operationList.adapter = adapter
         operationList.emptyView = txtOperationEmpty
+        setupFilters()
 
         btnAddOperation.setOnClickListener { showOperationDialog() }
+        btnExportOperations.setOnClickListener { exportOperationsPdf() }
 
         operationList.setOnItemClickListener { _, _, position, _ ->
-            showOperationDialog(operations[position])
+            showOperationDialog(filteredOperations[position])
         }
 
         operationList.setOnItemLongClickListener { _, _, position, _ ->
-            confirmDeleteOperation(operations[position])
+            confirmDeleteOperation(filteredOperations[position])
             true
         }
 
         loadEngineers()
         loadOperations()
+    }
+
+    private fun setupFilters() {
+        spinnerStatusFilter.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            arrayOf("Todos los estados", "Planeada", "En progreso", "Completada", "Pausada")
+        )
+        spinnerTypeFilter.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            arrayOf("Todos los tipos", "Pozo", "Entrenamiento", "Reunion interna", "Mantenimiento", "Soporte tecnico")
+        )
+        inputOperationSearch.addTextChangedListener(simpleWatcher { applyOperationFilters() })
+        spinnerStatusFilter.onItemSelectedListener = simpleSelectedListener { applyOperationFilters() }
+        spinnerTypeFilter.onItemSelectedListener = simpleSelectedListener { applyOperationFilters() }
     }
 
     private fun loadEngineers() {
@@ -111,6 +144,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                         type = doc.getString("type").orEmpty(),
                         location = doc.getString("location").orEmpty(),
                         date = doc.getString("date").orEmpty(),
+                        startDate = doc.getString("startDate").orEmpty(),
+                        startTime = doc.getString("startTime").orEmpty(),
+                        endDate = doc.getString("endDate").orEmpty(),
+                        endTime = doc.getString("endTime").orEmpty(),
                         status = doc.getString("status").orEmpty(),
                         description = doc.getString("description").orEmpty(),
                         revenue = doc.getDouble("revenue") ?: 0.0,
@@ -127,7 +164,7 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                 txtOperationSummary.text = "${operations.size} operaciones registradas."
                 txtOperationOpenCount.text = "Activas: $active"
                 txtOperationEngineerCount.text = "Asignados: $assigned"
-                adapter.notifyDataSetChanged()
+                applyOperationFilters()
             }
             .addOnFailureListener { showError("No se pudieron cargar operaciones", it) }
     }
@@ -139,6 +176,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
         val locationInput = dialogView.findViewById<EditText>(R.id.inputOperationLocation)
         val revenueInput = dialogView.findViewById<EditText>(R.id.inputOperationRevenue)
         val dateInput = dialogView.findViewById<EditText>(R.id.inputOperationDate)
+        val startDateInput = dialogView.findViewById<EditText>(R.id.inputOperationStartDate)
+        val startTimeInput = dialogView.findViewById<EditText>(R.id.inputOperationStartTime)
+        val endDateInput = dialogView.findViewById<EditText>(R.id.inputOperationEndDate)
+        val endTimeInput = dialogView.findViewById<EditText>(R.id.inputOperationEndTime)
         val statusSpinner = dialogView.findViewById<Spinner>(R.id.inputOperationStatus)
         val descriptionInput = dialogView.findViewById<EditText>(R.id.inputOperationDescription)
         val btnSelectEngineers = dialogView.findViewById<MaterialButton>(R.id.btnSelectEngineers)
@@ -163,6 +204,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             locationInput.setText(it.location)
             revenueInput.setText(if (it.revenue > 0.0) it.revenue.toString() else "")
             dateInput.setText(it.date)
+            startDateInput.setText(it.startDate)
+            startTimeInput.setText(it.startTime)
+            endDateInput.setText(it.endDate)
+            endTimeInput.setText(it.endTime)
             descriptionInput.setText(it.description)
             typeSpinner.setSelection(operationTypes.indexOf(it.type).takeIf { index -> index >= 0 } ?: 0)
             statusSpinner.setSelection(operationStatuses.indexOf(it.status).takeIf { index -> index >= 0 } ?: 0)
@@ -188,17 +233,12 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
         }
 
         dateInput.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, day ->
-                    dateInput.setText("$day/${month + 1}/$year")
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            pickDate(dateInput)
         }
+        startDateInput.setOnClickListener { pickDate(startDateInput) }
+        endDateInput.setOnClickListener { pickDate(endDateInput) }
+        startTimeInput.setOnClickListener { pickTime(startTimeInput) }
+        endTimeInput.setOnClickListener { pickTime(endTimeInput) }
 
         btnSelectEngineers.setOnClickListener {
             if (engineers.isEmpty()) {
@@ -208,6 +248,7 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
 
             val names = engineers.map { "${it.name} (${it.type})" }.toTypedArray()
             AlertDialog.Builder(requireContext())
+                .setIcon(R.drawable.ic_nav_engineers)
                 .setTitle("Asignar ingenieros")
                 .setMultiChoiceItems(names, selectedEngineerIndexes) { _, which, isChecked ->
                     selectedEngineerIndexes[which] = isChecked
@@ -222,9 +263,11 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                 }
                 .setNegativeButton("Cancelar", null)
                 .show()
+                .also { DialogStyle.apply(it) }
         }
 
         AlertDialog.Builder(requireContext())
+            .setIcon(R.drawable.ic_nav_operations)
             .setTitle(if (operation == null) "Crear operacion" else "Editar operacion")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
@@ -247,6 +290,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                     "revenue" to revenue,
                     "location" to locationInput.text.toString().trim(),
                     "date" to dateInput.text.toString().trim(),
+                    "startDate" to startDateInput.text.toString().trim(),
+                    "startTime" to startTimeInput.text.toString().trim(),
+                    "endDate" to endDateInput.text.toString().trim(),
+                    "endTime" to endTimeInput.text.toString().trim(),
                     "status" to statusSpinner.selectedItem.toString(),
                     "description" to descriptionInput.text.toString().trim(),
                     "engineerIds" to selectedEngineers.map { it.id },
@@ -277,10 +324,12 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun confirmDeleteOperation(operation: Operation) {
         AlertDialog.Builder(requireContext())
+            .setIcon(android.R.drawable.ic_menu_delete)
             .setTitle("Eliminar operacion")
             .setMessage("Quieres eliminar ${operation.title.ifBlank { "esta operacion" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
@@ -294,6 +343,29 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
+    }
+
+    private fun pickDate(input: EditText) {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day -> input.setText("$day/${month + 1}/$year") },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun pickTime(input: EditText) {
+        val calendar = Calendar.getInstance()
+        TimePickerDialog(
+            requireContext(),
+            { _, hour, minute -> input.setText(String.format("%02d:%02d", hour, minute)) },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        ).show()
     }
 
     private fun showError(message: String, error: Exception) {
@@ -315,9 +387,9 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             row.findViewById<TextView>(R.id.txtOperationType).text =
                 operation.type.ifBlank { "General" }
             row.findViewById<TextView>(R.id.txtOperationMeta).text =
-                "${operation.status.ifBlank { "Planeada" }} | ${operation.date.ifBlank { "Sin fecha" }} | ${operation.location.ifBlank { "Sin ubicacion" }}"
+                "${operation.status.ifBlank { "Planeada" }} | ${operation.location.ifBlank { "Sin ubicacion" }}"
             row.findViewById<TextView>(R.id.txtOperationDescription).text =
-                operation.description.ifBlank { "Sin descripcion registrada" }
+                "${operation.description.ifBlank { "Sin descripcion registrada" }}\nInicio: ${operation.startDate.ifBlank { operation.date.ifBlank { "Sin fecha" } }} ${operation.startTime.ifBlank { "" }}\nTermino: ${operation.endDate.ifBlank { "Sin fecha" }} ${operation.endTime.ifBlank { "" }}"
             val revenueText = row.findViewById<TextView>(R.id.txtOperationRevenue)
             if (operation.type == "Pozo") {
                 revenueText.visibility = View.VISIBLE
@@ -327,6 +399,9 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             }
             row.findViewById<TextView>(R.id.txtOperationEngineers).text =
                 "Ingenieros: ${operation.engineerNames.joinToString(", ").ifBlank { "Sin asignar" }}"
+            row.findViewById<MaterialButton>(R.id.btnEditOperation).setOnClickListener {
+                showOperationDialog(operation)
+            }
             row.findViewById<MaterialButton>(R.id.btnDeleteOperation).setOnClickListener {
                 confirmDeleteOperation(operation)
             }
@@ -341,6 +416,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
         val type: String,
         val location: String,
         val date: String,
+        val startDate: String,
+        val startTime: String,
+        val endDate: String,
+        val endTime: String,
         val status: String,
         val description: String,
         val revenue: Double,
@@ -350,5 +429,50 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
 
     companion object {
         private const val TAG = "OperationsFragment"
+    }
+
+    private fun applyOperationFilters() {
+        val query = inputOperationSearch.text.toString().trim().lowercase()
+        val statusFilter = spinnerStatusFilter.selectedItem?.toString().orEmpty()
+        val typeFilter = spinnerTypeFilter.selectedItem?.toString().orEmpty()
+
+        filteredOperations.clear()
+        filteredOperationIds.clear()
+
+        operations.forEachIndexed { index, operation ->
+            val matchesSearch = query.isBlank() ||
+                listOf(operation.title, operation.description, operation.location, operation.engineerNames.joinToString(" "))
+                    .any { it.lowercase().contains(query) }
+            val matchesStatus = statusFilter == "Todos los estados" || operation.status == statusFilter
+            val matchesType = typeFilter == "Todos los tipos" || operation.type == typeFilter
+            if (matchesSearch && matchesStatus && matchesType) {
+                filteredOperations.add(operation)
+                filteredOperationIds.add(operationIds[index])
+            }
+        }
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun exportOperationsPdf() {
+        val rows = filteredOperations.map { operation ->
+            "${operation.title.ifBlank { "Operacion sin nombre" }} | ${operation.type.ifBlank { "General" }} | ${operation.status.ifBlank { "Planeada" }} | Ubicacion: ${operation.location.ifBlank { "Sin ubicacion" }} | Termino: ${operation.endDate.ifBlank { "Sin fecha" }} ${operation.endTime} | Ingenieros: ${operation.engineerNames.joinToString(", ").ifBlank { "Sin asignar" }}"
+        }
+        val file = PdfReportExporter.export(requireContext(), "Reporte de operaciones", rows)
+        Toast.makeText(context, "PDF exportado: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+    }
+
+    private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = onChanged()
+            override fun afterTextChanged(s: Editable?) = Unit
+        }
+    }
+
+    private fun simpleSelectedListener(onSelected: () -> Unit): AdapterView.OnItemSelectedListener {
+        return object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = onSelected()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
     }
 }

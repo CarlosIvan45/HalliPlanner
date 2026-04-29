@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -22,6 +23,7 @@ class AuthActivity : AppCompatActivity() {
     private lateinit var inputName: EditText
     private lateinit var inputEmail: EditText
     private lateinit var inputPassword: EditText
+    private lateinit var checkRememberMe: CheckBox
     private lateinit var btnPrimaryAuth: MaterialButton
     private lateinit var btnSecondaryAuth: MaterialButton
     private lateinit var txtForgotPassword: TextView
@@ -29,14 +31,20 @@ class AuthActivity : AppCompatActivity() {
     private var mode = AuthMode.LOGIN
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppSettings.applySavedTheme(this)
         super.onCreate(savedInstanceState)
 
         auth = FirebaseAuth.getInstance()
+        auth.setLanguageCode("es")
         db = FirebaseFirestore.getInstance()
 
-        if (auth.currentUser != null) {
+        if (auth.currentUser != null && SessionManager.isRememberActive(this)) {
             openPlanner()
             return
+        }
+        if (auth.currentUser != null && SessionManager.isExpiredRememberSession(this)) {
+            auth.signOut()
+            SessionManager.clear(this)
         }
 
         setContentView(R.layout.activity_auth)
@@ -46,6 +54,7 @@ class AuthActivity : AppCompatActivity() {
         inputName = findViewById(R.id.inputName)
         inputEmail = findViewById(R.id.inputEmail)
         inputPassword = findViewById(R.id.inputPassword)
+        checkRememberMe = findViewById(R.id.checkRememberMe)
         btnPrimaryAuth = findViewById(R.id.btnPrimaryAuth)
         btnSecondaryAuth = findViewById(R.id.btnSecondaryAuth)
         txtForgotPassword = findViewById(R.id.txtForgotPassword)
@@ -87,6 +96,7 @@ class AuthActivity : AppCompatActivity() {
         setLoading(true)
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener {
+                updateRememberPreference()
                 setLoading(false)
                 openPlanner()
             }
@@ -120,10 +130,12 @@ class AuthActivity : AppCompatActivity() {
                 db.collection("users").document(uid)
                     .set(user)
                     .addOnSuccessListener {
+                        updateRememberPreference()
                         setLoading(false)
                         openPlanner()
                     }
                     .addOnFailureListener {
+                        updateRememberPreference()
                         setLoading(false)
                         Toast.makeText(
                             this,
@@ -148,10 +160,31 @@ class AuthActivity : AppCompatActivity() {
         }
 
         setLoading(true)
+        auth.fetchSignInMethodsForEmail(email)
+            .addOnSuccessListener {
+                val methods = it.signInMethods.orEmpty()
+                if (methods.isEmpty()) {
+                    setLoading(false)
+                    Toast.makeText(this, "No existe una cuenta registrada con ese correo.", Toast.LENGTH_LONG).show()
+                } else {
+                    sendResetEmail(email)
+                }
+            }
+            .addOnFailureListener {
+                setLoading(false)
+                showAuthError("No se pudo validar el correo", it)
+            }
+    }
+
+    private fun sendResetEmail(email: String) {
         auth.sendPasswordResetEmail(email)
             .addOnSuccessListener {
                 setLoading(false)
-                Toast.makeText(this, "Te enviamos un correo para recuperar tu contrasena", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this,
+                    "Correo de recuperacion enviado. Revisa tu bandeja y spam.",
+                    Toast.LENGTH_LONG
+                ).show()
                 mode = AuthMode.LOGIN
                 renderMode()
             }
@@ -168,6 +201,7 @@ class AuthActivity : AppCompatActivity() {
                 txtAuthSubtitle.text = "Inicia sesion para organizar tareas, operaciones y reuniones."
                 inputName.visibility = View.GONE
                 inputPassword.visibility = View.VISIBLE
+                checkRememberMe.visibility = View.VISIBLE
                 btnPrimaryAuth.text = "Entrar"
                 btnSecondaryAuth.text = "Crear cuenta"
                 txtForgotPassword.visibility = View.VISIBLE
@@ -177,6 +211,7 @@ class AuthActivity : AppCompatActivity() {
                 txtAuthSubtitle.text = "Registra tu acceso para trabajar con la base de datos."
                 inputName.visibility = View.VISIBLE
                 inputPassword.visibility = View.VISIBLE
+                checkRememberMe.visibility = View.VISIBLE
                 btnPrimaryAuth.text = "Registrar"
                 btnSecondaryAuth.text = "Ya tengo cuenta"
                 txtForgotPassword.visibility = View.GONE
@@ -186,6 +221,7 @@ class AuthActivity : AppCompatActivity() {
                 txtAuthSubtitle.text = "Escribe tu correo y te enviaremos instrucciones."
                 inputName.visibility = View.GONE
                 inputPassword.visibility = View.GONE
+                checkRememberMe.visibility = View.GONE
                 btnPrimaryAuth.text = "Enviar correo"
                 btnSecondaryAuth.text = "Volver al login"
                 txtForgotPassword.visibility = View.GONE
@@ -197,6 +233,15 @@ class AuthActivity : AppCompatActivity() {
         btnPrimaryAuth.isEnabled = !isLoading
         btnSecondaryAuth.isEnabled = !isLoading
         txtForgotPassword.isEnabled = !isLoading
+        checkRememberMe.isEnabled = !isLoading
+    }
+
+    private fun updateRememberPreference() {
+        if (checkRememberMe.isChecked) {
+            SessionManager.rememberForFifteenDays(this)
+        } else {
+            SessionManager.clear(this)
+        }
     }
 
     private fun validateEmail(email: String): Boolean {
@@ -231,6 +276,10 @@ class AuthActivity : AppCompatActivity() {
                 "La contrasena debe tener al menos 6 caracteres. Codigo: $code"
             "ERROR_NETWORK_REQUEST_FAILED" ->
                 "No hay conexion con Firebase. Codigo: $code"
+            "ERROR_USER_NOT_FOUND" ->
+                "No existe una cuenta con ese correo. Codigo: $code"
+            "ERROR_TOO_MANY_REQUESTS" ->
+                "Demasiados intentos. Espera unos minutos. Codigo: $code"
             "ERROR_INTERNAL_ERROR" ->
                 "Firebase Auth no esta listo o falta activar el proveedor Email/Password. Codigo: $code"
             else ->

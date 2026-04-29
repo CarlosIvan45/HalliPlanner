@@ -47,6 +47,38 @@
             android:focusable="false"
             android:hint="Fecha planeada" />
 
+        <EditText
+            android:id="@+id/inputOperationStartDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:hint="Fecha de inicio" />
+
+        <EditText
+            android:id="@+id/inputOperationStartTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:hint="Hora de inicio" />
+
+        <EditText
+            android:id="@+id/inputOperationEndDate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:hint="Fecha de termino" />
+
+        <EditText
+            android:id="@+id/inputOperationEndTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:focusable="false"
+            android:hint="Hora de termino" />
+
         <Spinner
             android:id="@+id/inputOperationStatus"
             android:layout_width="match_parent"

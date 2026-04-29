@@ -5,9 +5,9 @@
     android:layout_height="match_parent"
     android:background="@color/planner_background"
     android:fillViewport="true"
-    android:paddingStart="24dp"
-    android:paddingTop="26dp"
-    android:paddingEnd="24dp"
+    android:paddingStart="20dp"
+    android:paddingTop="44dp"
+    android:paddingEnd="20dp"
     android:paddingBottom="26dp">
 
     <LinearLayout
@@ -19,10 +19,12 @@
             android:id="@+id/txtGreeting"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Dashboard ejecutivo"
-            android:textColor="@color/planner_text"
+            android:background="@drawable/bg_title_pastel"
+            android:padding="14dp"
+            android:text="Dashboard Ejecutivo"
             android:gravity="center"
-            android:textSize="27sp"
+            android:textColor="@color/planner_text"
+            android:textSize="28sp"
             android:textStyle="bold" />
 
         <TextView
@@ -30,47 +32,75 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="18dp"
+            android:layout_marginBottom="16dp"
             android:text="Resumen general"
-            android:gravity="center"
             android:textColor="@color/planner_muted"
             android:textSize="14sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
-            app:cardBackgroundColor="@color/planner_surface"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@android:color/transparent"
             app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/planner_line"
-            app:strokeWidth="1dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_dashboard_hero"
                 android:orientation="vertical"
-                    android:padding="20dp">
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill_primary"
+                    android:paddingStart="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingEnd="10dp"
+                    android:paddingBottom="5dp"
+                    android:text="HalliPlanner"
+                    android:textColor="@color/planner_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/txtHomeFocus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
                     android:text="Vista general"
-                    android:textColor="@color/planner_text"
-                    android:gravity="center"
-                    android:textSize="21sp"
+                    android:textColor="@color/white"
+                    android:textSize="26sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/txtHomeFocusDetail"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:text="Operaciones, reuniones, actividades e ingenieros en un solo lugar."
-                    android:gravity="center"
-                    android:textColor="@color/planner_muted"
+                    android:textColor="@color/white"
                     android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="Revenue total de pozos"
+                    android:textColor="@color/white"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/txtHomeRevenueTotal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="$0.00"
+                    android:textColor="@color/white"
+                    android:textSize="32sp"
+                    android:textStyle="bold" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -94,26 +124,27 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="112dp"
+                    android:background="@drawable/bg_metric_primary"
                     android:orientation="vertical"
                     android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Operaciones"
-                        android:textColor="@color/planner_muted"
-                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/txtHomeOperationsCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
                         android:text="0"
-                        android:textColor="@color/planner_text"
-                        android:textSize="28sp"
+                        android:textColor="@color/planner_primary"
+                        android:textSize="30sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Operaciones activas"
+                        android:textColor="@color/planner_text"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -131,26 +162,27 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="112dp"
+                    android:background="@drawable/bg_metric_soft"
                     android:orientation="vertical"
                     android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Reuniones hoy"
-                        android:textColor="@color/planner_muted"
-                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/txtHomeMeetingsCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
                         android:text="0"
-                        android:textColor="@color/planner_text"
-                        android:textSize="28sp"
+                        android:textColor="@color/planner_primary"
+                        android:textSize="30sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Reuniones hoy"
+                        android:textColor="@color/planner_text"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -167,26 +199,26 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="112dp"
                     android:orientation="vertical"
                     android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Actividades"
-                        android:textColor="@color/planner_muted"
-                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/txtHomeTasksCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
                         android:text="0"
-                        android:textColor="@color/planner_text"
-                        android:textSize="28sp"
+                        android:textColor="@color/planner_primary"
+                        android:textSize="30sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Actividades abiertas"
+                        android:textColor="@color/planner_muted"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -203,26 +235,26 @@
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="112dp"
                     android:orientation="vertical"
                     android:padding="14dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Ingenieros"
-                        android:textColor="@color/planner_muted"
-                        android:textSize="13sp" />
 
                     <TextView
                         android:id="@+id/txtHomeEngineersCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
                         android:text="0"
-                        android:textColor="@color/planner_text"
-                        android:textSize="28sp"
+                        android:textColor="@color/planner_primary"
+                        android:textSize="30sp"
                         android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Ingenieros"
+                        android:textColor="@color/planner_muted"
+                        android:textSize="13sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </GridLayout>
@@ -231,7 +263,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
-            app:cardBackgroundColor="@color/planner_accent_soft"
+            app:cardBackgroundColor="@color/planner_surface"
             app:cardCornerRadius="8dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/planner_line"
@@ -240,28 +272,50 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="18dp">
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text="Revenue total de pozos"
-                    android:textColor="@color/planner_muted"
-                    android:textSize="14sp" />
+                <com.example.halliplanner.DashboardPieChartView
+                    android:id="@+id/pieDashboard"
+                    android:layout_width="138dp"
+                    android:layout_height="138dp" />
 
-                <TextView
-                    android:id="@+id/txtHomeRevenueTotal"
-                    android:layout_width="match_parent"
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:gravity="center"
-                    android:text="$0.00"
-                    android:textColor="@color/planner_primary"
-                    android:textSize="30sp"
-                    android:textStyle="bold" />
+                    android:layout_marginStart="16dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Distribucion operativa"
+                        android:textColor="@color/planner_text"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/txtPieSummary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Operaciones, actividades y reuniones"
+                        android:textColor="@color/planner_muted"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:id="@+id/txtHomeAlerts"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/bg_metric_primary"
+                        android:padding="10dp"
+                        android:text="Sin alertas nuevas"
+                        android:textColor="@color/planner_text"
+                        android:textSize="13sp" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -305,8 +359,8 @@
                     android:layout_marginTop="6dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="@color/planner_primary"
-                    android:progressBackgroundTint="@color/planner_surface_soft" />
+                    android:progressBackgroundTint="@color/planner_surface_soft"
+                    android:progressTint="@color/planner_primary" />
 
                 <TextView
                     android:id="@+id/txtTasksChartLabel"
@@ -324,8 +378,8 @@
                     android:layout_marginTop="6dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="@color/planner_accent"
-                    android:progressBackgroundTint="@color/planner_surface_soft" />
+                    android:progressBackgroundTint="@color/planner_surface_soft"
+                    android:progressTint="@color/planner_accent" />
 
                 <TextView
                     android:id="@+id/txtEngineersChartLabel"
@@ -343,8 +397,8 @@
                     android:layout_marginTop="6dp"
                     android:max="100"
                     android:progress="0"
-                    android:progressTint="@color/planner_secondary"
-                    android:progressBackgroundTint="@color/planner_surface_soft" />
+                    android:progressBackgroundTint="@color/planner_surface_soft"
+                    android:progressTint="@color/planner_secondary" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -358,14 +412,38 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/txtHomeExecutiveList"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/planner_surface"
-            android:padding="16dp"
-            android:text="Sin informacion operativa."
-            android:textColor="@color/planner_muted"
-            android:textSize="14sp" />
+            app:cardBackgroundColor="@color/planner_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/planner_line"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Resumen profesional"
+                    android:textColor="@color/planner_text"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtHomeExecutiveList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Sin informacion operativa."
+                    android:textColor="@color/planner_muted"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 </ScrollView>

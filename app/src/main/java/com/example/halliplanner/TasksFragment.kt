@@ -2,6 +2,9 @@ package com.example.halliplanner
 
 import android.app.AlertDialog
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.text.Editable
+import android.text.TextWatcher
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -27,7 +30,9 @@ class TasksFragment : Fragment() {
     private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var taskList: ArrayList<PlannerTask>
+    private lateinit var filteredTaskList: ArrayList<PlannerTask>
     private lateinit var taskIds: ArrayList<String>
+    private lateinit var filteredTaskIds: ArrayList<String>
     private lateinit var adapter: TaskAdapter
     private lateinit var taskListView: ListView
     private lateinit var btnAddTask: MaterialButton
@@ -35,6 +40,10 @@ class TasksFragment : Fragment() {
     private lateinit var txtCompleted: TextView
     private lateinit var txtProgress: TextView
     private lateinit var txtTaskEmpty: TextView
+    private lateinit var inputTaskSearch: EditText
+    private lateinit var spinnerStatusFilter: Spinner
+    private lateinit var spinnerPriorityFilter: Spinner
+    private lateinit var btnExportTasks: MaterialButton
 
     companion object {
         private const val TAG = "TasksFragment"
@@ -54,12 +63,19 @@ class TasksFragment : Fragment() {
         txtCompleted = view.findViewById(R.id.txtCompleted)
         txtProgress = view.findViewById(R.id.txtProgress)
         txtTaskEmpty = view.findViewById(R.id.txtTaskEmpty)
+        inputTaskSearch = view.findViewById(R.id.inputTaskSearch)
+        spinnerStatusFilter = view.findViewById(R.id.spinnerTaskStatusFilter)
+        spinnerPriorityFilter = view.findViewById(R.id.spinnerTaskPriorityFilter)
+        btnExportTasks = view.findViewById(R.id.btnExportTasks)
 
         taskList = ArrayList()
+        filteredTaskList = ArrayList()
         taskIds = ArrayList()
-        adapter = TaskAdapter(taskList)
+        filteredTaskIds = ArrayList()
+        adapter = TaskAdapter(filteredTaskList)
         taskListView.adapter = adapter
         taskListView.emptyView = txtTaskEmpty
+        setupFilters()
 
         loadTasks()
 
@@ -68,15 +84,33 @@ class TasksFragment : Fragment() {
         }
 
         taskListView.setOnItemClickListener { _, _, position, _ ->
-            showTaskDialog(taskList[position], taskIds[position])
+            showTaskDialog(filteredTaskList[position], filteredTaskIds[position])
         }
 
         taskListView.setOnItemLongClickListener { _, _, position, _ ->
-            confirmDeleteTask(taskList[position], taskIds[position])
+            confirmDeleteTask(filteredTaskList[position], filteredTaskIds[position])
             true
         }
 
+        btnExportTasks.setOnClickListener { exportTasksPdf() }
+
         return view
+    }
+
+    private fun setupFilters() {
+        spinnerStatusFilter.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            arrayOf("Todos los estados", "Pendiente", "En progreso", "Completada")
+        )
+        spinnerPriorityFilter.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            arrayOf("Todas las prioridades", "Alta", "Media", "Baja")
+        )
+        inputTaskSearch.addTextChangedListener(simpleWatcher { applyTaskFilters() })
+        spinnerStatusFilter.onItemSelectedListener = simpleSelectedListener { applyTaskFilters() }
+        spinnerPriorityFilter.onItemSelectedListener = simpleSelectedListener { applyTaskFilters() }
     }
 
     private fun loadTasks() {
@@ -93,6 +127,10 @@ class TasksFragment : Fragment() {
                             description = document.getString("description").orEmpty(),
                             assignedTo = document.getString("assignedTo").orEmpty(),
                             date = document.getString("date").orEmpty(),
+                            startDate = document.getString("startDate").orEmpty(),
+                            startTime = document.getString("startTime").orEmpty(),
+                            endDate = document.getString("endDate").orEmpty(),
+                            endTime = document.getString("endTime").orEmpty(),
                             priority = document.getString("priority").orEmpty(),
                             status = document.getString("status").orEmpty(),
                             operation = document.getString("operation").orEmpty()
@@ -103,6 +141,7 @@ class TasksFragment : Fragment() {
 
                 adapter.notifyDataSetChanged()
                 updateCounters(documents)
+                applyTaskFilters()
             }
             .addOnFailureListener { error ->
                 showFirestoreError("No se pudieron cargar las tareas", error)
@@ -117,21 +156,21 @@ class TasksFragment : Fragment() {
         val descInput = dialogView.findViewById<EditText>(R.id.inputDescription)
         val assignedInput = dialogView.findViewById<EditText>(R.id.inputAssigned)
         val dateInput = dialogView.findViewById<EditText>(R.id.inputDate)
+        val startDateInput = dialogView.findViewById<EditText>(R.id.inputStartDate)
+        val startTimeInput = dialogView.findViewById<EditText>(R.id.inputStartTime)
+        val endDateInput = dialogView.findViewById<EditText>(R.id.inputEndDate)
+        val endTimeInput = dialogView.findViewById<EditText>(R.id.inputEndTime)
         val prioritySpinner = dialogView.findViewById<Spinner>(R.id.inputPriority)
         val statusSpinner = dialogView.findViewById<Spinner>(R.id.inputStatus)
         val calendar = Calendar.getInstance()
 
         dateInput.setOnClickListener {
-            DatePickerDialog(
-                requireContext(),
-                { _, year, month, day ->
-                    dateInput.setText(formatDate(day, month + 1, year))
-                },
-                calendar.get(Calendar.YEAR),
-                calendar.get(Calendar.MONTH),
-                calendar.get(Calendar.DAY_OF_MONTH)
-            ).show()
+            pickDate(dateInput)
         }
+        startDateInput.setOnClickListener { pickDate(startDateInput) }
+        endDateInput.setOnClickListener { pickDate(endDateInput) }
+        startTimeInput.setOnClickListener { pickTime(startTimeInput) }
+        endTimeInput.setOnClickListener { pickTime(endTimeInput) }
 
         val priorities = arrayOf("Alta", "Media", "Baja")
         val status = arrayOf("Pendiente", "En progreso", "Completada")
@@ -148,11 +187,16 @@ class TasksFragment : Fragment() {
             descInput.setText(it.description)
             assignedInput.setText(it.assignedTo)
             dateInput.setText(it.date)
+            startDateInput.setText(it.startDate)
+            startTimeInput.setText(it.startTime)
+            endDateInput.setText(it.endDate)
+            endTimeInput.setText(it.endTime)
             prioritySpinner.setSelection(priorities.indexOf(it.priority).takeIf { index -> index >= 0 } ?: 1)
             statusSpinner.setSelection(status.indexOf(it.status).takeIf { index -> index >= 0 } ?: 0)
         }
 
         AlertDialog.Builder(requireContext())
+            .setIcon(R.drawable.ic_nav_tasks)
             .setTitle(if (task == null) "Nueva actividad" else "Editar actividad")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
@@ -160,6 +204,10 @@ class TasksFragment : Fragment() {
                 val description = descInput.text.toString().trim()
                 val assigned = assignedInput.text.toString().trim()
                 val date = dateInput.text.toString().trim()
+                val startDate = startDateInput.text.toString().trim()
+                val startTime = startTimeInput.text.toString().trim()
+                val endDate = endDateInput.text.toString().trim()
+                val endTime = endTimeInput.text.toString().trim()
                 val operation = operationInput.text.toString().trim()
                 val priority = prioritySpinner.selectedItem.toString()
                 val taskStatus = statusSpinner.selectedItem.toString()
@@ -167,11 +215,25 @@ class TasksFragment : Fragment() {
                 if (title.isBlank()) {
                     Toast.makeText(context, "Agrega un titulo", Toast.LENGTH_SHORT).show()
                 } else {
-                    saveTask(taskId, title, description, assigned, date, priority, taskStatus, operation)
+                    saveTask(
+                        taskId,
+                        title,
+                        description,
+                        assigned,
+                        date,
+                        startDate,
+                        startTime,
+                        endDate,
+                        endTime,
+                        priority,
+                        taskStatus,
+                        operation
+                    )
                 }
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun saveTask(
@@ -180,6 +242,10 @@ class TasksFragment : Fragment() {
         description: String,
         assigned: String,
         date: String,
+        startDate: String,
+        startTime: String,
+        endDate: String,
+        endTime: String,
         priority: String,
         status: String,
         operation: String
@@ -189,6 +255,10 @@ class TasksFragment : Fragment() {
             "description" to description,
             "assignedTo" to assigned,
             "date" to date,
+            "startDate" to startDate,
+            "startTime" to startTime,
+            "endDate" to endDate,
+            "endTime" to endTime,
             "priority" to priority,
             "status" to status,
             "operation" to operation,
@@ -224,6 +294,7 @@ class TasksFragment : Fragment() {
 
     private fun confirmDeleteTask(task: PlannerTask, taskId: String) {
         AlertDialog.Builder(requireContext())
+            .setIcon(android.R.drawable.ic_menu_delete)
             .setTitle("Eliminar actividad")
             .setMessage("Quieres eliminar ${task.title.ifBlank { "esta actividad" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
@@ -240,6 +311,7 @@ class TasksFragment : Fragment() {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun updateCounters(documents: QuerySnapshot) {
@@ -264,6 +336,28 @@ class TasksFragment : Fragment() {
         return "$day/$month/$year"
     }
 
+    private fun pickDate(input: EditText) {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day -> input.setText(formatDate(day, month + 1, year)) },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun pickTime(input: EditText) {
+        val calendar = Calendar.getInstance()
+        TimePickerDialog(
+            requireContext(),
+            { _, hour, minute -> input.setText(String.format("%02d:%02d", hour, minute)) },
+            calendar.get(Calendar.HOUR_OF_DAY),
+            calendar.get(Calendar.MINUTE),
+            true
+        ).show()
+    }
+
     private fun showFirestoreError(message: String, error: Exception) {
         Log.e(TAG, message, error)
         val detail = error.localizedMessage ?: error.javaClass.simpleName
@@ -286,11 +380,17 @@ class TasksFragment : Fragment() {
             row.findViewById<TextView>(R.id.txtTaskMeta).text =
                 "${task.status.ifBlank { "Pendiente" }} | ${task.date.ifBlank { "Sin fecha" }} | ${task.operation.ifBlank { "Operacion general" }}"
             row.findViewById<TextView>(R.id.txtTaskPeople).text =
-                "Responsables: ${task.assignedTo.ifBlank { "Sin asignar" }}"
-            row.findViewById<MaterialButton>(R.id.btnDeleteTask).setOnClickListener {
-                val index = taskList.indexOf(task)
+                "Responsables: ${task.assignedTo.ifBlank { "Sin asignar" }}\nInicio: ${task.startDate.ifBlank { "Sin fecha" }} ${task.startTime.ifBlank { "" }}\nTermino: ${task.endDate.ifBlank { task.date.ifBlank { "Sin fecha" } }} ${task.endTime.ifBlank { "" }}"
+            row.findViewById<MaterialButton>(R.id.btnEditTask).setOnClickListener {
+                val index = filteredTaskList.indexOf(task)
                 if (index >= 0) {
-                    confirmDeleteTask(task, taskIds[index])
+                    showTaskDialog(task, filteredTaskIds[index])
+                }
+            }
+            row.findViewById<MaterialButton>(R.id.btnDeleteTask).setOnClickListener {
+                val index = filteredTaskList.indexOf(task)
+                if (index >= 0) {
+                    confirmDeleteTask(task, filteredTaskIds[index])
                 }
             }
 
@@ -303,8 +403,58 @@ class TasksFragment : Fragment() {
         val description: String,
         val assignedTo: String,
         val date: String,
+        val startDate: String,
+        val startTime: String,
+        val endDate: String,
+        val endTime: String,
         val priority: String,
         val status: String,
         val operation: String
     )
+
+    private fun applyTaskFilters() {
+        val query = inputTaskSearch.text.toString().trim().lowercase()
+        val statusFilter = spinnerStatusFilter.selectedItem?.toString().orEmpty()
+        val priorityFilter = spinnerPriorityFilter.selectedItem?.toString().orEmpty()
+
+        filteredTaskList.clear()
+        filteredTaskIds.clear()
+
+        taskList.forEachIndexed { index, task ->
+            val matchesSearch = query.isBlank() ||
+                listOf(task.title, task.description, task.assignedTo, task.operation)
+                    .any { it.lowercase().contains(query) }
+            val matchesStatus = statusFilter == "Todos los estados" || task.status == statusFilter
+            val matchesPriority = priorityFilter == "Todas las prioridades" || task.priority == priorityFilter
+
+            if (matchesSearch && matchesStatus && matchesPriority) {
+                filteredTaskList.add(task)
+                filteredTaskIds.add(taskIds[index])
+            }
+        }
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun exportTasksPdf() {
+        val rows = filteredTaskList.map { task ->
+            "${task.title.ifBlank { "Sin titulo" }} | ${task.status.ifBlank { "Pendiente" }} | Prioridad ${task.priority.ifBlank { "Media" }} | Responsable: ${task.assignedTo.ifBlank { "Sin asignar" }} | Termino: ${task.endDate.ifBlank { task.date.ifBlank { "Sin fecha" } }} ${task.endTime}"
+        }
+        val file = PdfReportExporter.export(requireContext(), "Reporte de actividades", rows)
+        Toast.makeText(context, "PDF exportado: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+    }
+
+    private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = onChanged()
+            override fun afterTextChanged(s: Editable?) = Unit
+        }
+    }
+
+    private fun simpleSelectedListener(onSelected: () -> Unit): android.widget.AdapterView.OnItemSelectedListener {
+        return object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) = onSelected()
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+        }
+    }
 }

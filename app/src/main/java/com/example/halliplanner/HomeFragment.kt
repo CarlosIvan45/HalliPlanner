@@ -1,11 +1,13 @@
 package com.example.halliplanner
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -14,6 +16,8 @@ import java.util.Locale
 class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private lateinit var db: FirebaseFirestore
+    private lateinit var auth: FirebaseAuth
+    private lateinit var txtGreeting: TextView
     private lateinit var txtOperationsCount: TextView
     private lateinit var txtMeetingsCount: TextView
     private lateinit var txtTasksCount: TextView
@@ -23,21 +27,30 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private lateinit var txtHomeFocus: TextView
     private lateinit var txtHomeFocusDetail: TextView
     private lateinit var txtExecutiveList: TextView
+    private lateinit var txtPieSummary: TextView
+    private lateinit var txtHomeAlerts: TextView
     private lateinit var txtOperationsChartLabel: TextView
     private lateinit var txtTasksChartLabel: TextView
     private lateinit var txtEngineersChartLabel: TextView
     private lateinit var progressOperations: ProgressBar
     private lateinit var progressTasks: ProgressBar
     private lateinit var progressEngineers: ProgressBar
+    private lateinit var pieDashboard: DashboardPieChartView
 
     private var operationsLine = "Operaciones: sin registros"
     private var meetingsLine = "Reuniones hoy: 0"
     private var tasksLine = "Actividades: sin registros"
+    private var activeOperationsCount = 0
+    private var openTasksCount = 0
+    private var todayMeetingsCount = 0
+    private val completedAlerts = linkedMapOf<String, String>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         db = FirebaseFirestore.getInstance()
+        auth = FirebaseAuth.getInstance()
+        txtGreeting = view.findViewById(R.id.txtGreeting)
         txtOperationsCount = view.findViewById(R.id.txtHomeOperationsCount)
         txtMeetingsCount = view.findViewById(R.id.txtHomeMeetingsCount)
         txtTasksCount = view.findViewById(R.id.txtHomeTasksCount)
@@ -47,22 +60,44 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         txtHomeFocus = view.findViewById(R.id.txtHomeFocus)
         txtHomeFocusDetail = view.findViewById(R.id.txtHomeFocusDetail)
         txtExecutiveList = view.findViewById(R.id.txtHomeExecutiveList)
+        txtPieSummary = view.findViewById(R.id.txtPieSummary)
+        txtHomeAlerts = view.findViewById(R.id.txtHomeAlerts)
         txtOperationsChartLabel = view.findViewById(R.id.txtOperationsChartLabel)
         txtTasksChartLabel = view.findViewById(R.id.txtTasksChartLabel)
         txtEngineersChartLabel = view.findViewById(R.id.txtEngineersChartLabel)
         progressOperations = view.findViewById(R.id.progressOperations)
         progressTasks = view.findViewById(R.id.progressTasks)
         progressEngineers = view.findViewById(R.id.progressEngineers)
+        pieDashboard = view.findViewById(R.id.pieDashboard)
 
         val calendar = Calendar.getInstance()
         txtToday.text = SimpleDateFormat("EEEE d MMMM yyyy", Locale("es", "MX"))
             .format(calendar.time)
             .replaceFirstChar { it.titlecase(Locale("es", "MX")) }
 
+        loadGreeting()
         loadOperations()
         loadTodayMeetings()
         loadTasks()
         loadEngineers()
+    }
+
+    private fun loadGreeting() {
+        val user = auth.currentUser ?: return
+        db.collection("users").document(user.uid)
+            .get()
+            .addOnSuccessListener { doc ->
+                val fullName = doc.getString("name").orEmpty().ifBlank { user.email.orEmpty() }
+                val firstName = fullName.trim().split(" ").firstOrNull().orEmpty()
+                txtGreeting.text = if (firstName.isBlank()) {
+                    "Bienvenido"
+                } else {
+                    "Bienvenido, $firstName"
+                }
+            }
+            .addOnFailureListener {
+                txtGreeting.text = "Bienvenido"
+            }
     }
 
     private fun loadOperations() {
@@ -78,6 +113,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val percent = percent(active, total)
 
                 txtOperationsCount.text = active.toString()
+                activeOperationsCount = active
+                updatePieChart()
                 txtRevenueTotal.text = "$${String.format("%,.2f", totalRevenue)}"
                 txtHomeFocus.text = "$active operaciones activas"
                 txtHomeFocusDetail.text = if (total == 0) {
@@ -98,6 +135,26 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                     }
                     "Operaciones destacadas:\n$sample"
                 }
+                documents
+                    .filter { it.getString("status") == "Completada" }
+                    .forEach { doc ->
+                        val title = doc.getString("title").orEmpty().ifBlank { "Operacion finalizada" }
+                        val endDate = doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() }
+                        completedAlerts["operation:${doc.id}"] =
+                            "Operacion finalizada: $title${if (endDate.isNotBlank()) " | Termino: $endDate" else ""}"
+                    }
+                documents
+                    .filter { it.getString("status") != "Completada" }
+                    .forEach { doc ->
+                        val endDate = doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() }
+                        val endTime = doc.getString("endTime").orEmpty()
+                        if (isDueSoon(endDate, endTime)) {
+                            val title = doc.getString("title").orEmpty().ifBlank { "Operacion sin nombre" }
+                            completedAlerts["due-operation:${doc.id}"] =
+                                "Operacion por vencer: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
+                        }
+                    }
+                renderAlerts()
                 renderExecutiveList()
             }
             .addOnFailureListener { error ->
@@ -118,11 +175,18 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
             .whereEqualTo("date", today)
             .get()
             .addOnSuccessListener { documents ->
-                txtMeetingsCount.text = documents.size().toString()
+                todayMeetingsCount = documents.size()
+                txtMeetingsCount.text = todayMeetingsCount.toString()
+                updatePieChart()
                 meetingsLine = if (documents.isEmpty) {
                     "Reuniones hoy: 0"
                 } else {
-                    "Reuniones hoy: ${documents.size()}"
+                    val sample = documents.take(3).joinToString("\n") { doc ->
+                        val time = doc.getString("time").orEmpty().ifBlank { "--:--" }
+                        val title = doc.getString("title").orEmpty().ifBlank { "Reunion sin titulo" }
+                        "$time | $title"
+                    }
+                    "Reuniones hoy: ${documents.size()}\n$sample"
                 }
                 renderExecutiveList()
             }
@@ -141,9 +205,44 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
                 val progress = documents.count { it.getString("status") == "En progreso" }
 
                 txtTasksCount.text = pending.toString()
+                openTasksCount = pending
+                updatePieChart()
                 progressTasks.progress = percent(progress, total)
                 txtTasksChartLabel.text = "Actividades en progreso: $progress de $total"
-                tasksLine = "Actividades pendientes: $pending"
+                tasksLine = if (total == 0) {
+                    "Actividades: sin registros"
+                } else {
+                    val nextTasks = documents
+                        .filter { it.getString("status") != "Completada" }
+                        .take(3)
+                        .joinToString("\n") { doc ->
+                            val title = doc.getString("title").orEmpty().ifBlank { "Actividad sin titulo" }
+                            val endDate = doc.getString("endDate").orEmpty()
+                                .ifBlank { doc.getString("date").orEmpty().ifBlank { "Sin termino" } }
+                            "$title | Termino: $endDate"
+                        }
+                    "Actividades pendientes: $pending${if (nextTasks.isNotBlank()) "\n$nextTasks" else ""}"
+                }
+                documents
+                    .filter { it.getString("status") == "Completada" }
+                    .forEach { doc ->
+                        val title = doc.getString("title").orEmpty().ifBlank { "Actividad finalizada" }
+                        val endDate = doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() }
+                        completedAlerts["task:${doc.id}"] =
+                            "Actividad finalizada: $title${if (endDate.isNotBlank()) " | Termino: $endDate" else ""}"
+                    }
+                documents
+                    .filter { it.getString("status") != "Completada" }
+                    .forEach { doc ->
+                        val endDate = doc.getString("endDate").orEmpty().ifBlank { doc.getString("date").orEmpty() }
+                        val endTime = doc.getString("endTime").orEmpty()
+                        if (isDueSoon(endDate, endTime)) {
+                            val title = doc.getString("title").orEmpty().ifBlank { "Actividad sin titulo" }
+                            completedAlerts["due-task:${doc.id}"] =
+                                "Actividad por vencer: $title | Termino: ${endDate.ifBlank { "Sin fecha" }} ${endTime.ifBlank { "" }}"
+                        }
+                    }
+                renderAlerts()
                 renderExecutiveList()
             }
             .addOnFailureListener { error ->
@@ -171,7 +270,46 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun renderExecutiveList() {
-        txtExecutiveList.text = "$operationsLine\n\n$meetingsLine\n$tasksLine"
+        txtExecutiveList.text =
+            "$operationsLine\n\nAgenda de hoy:\n$meetingsLine\n\nSeguimiento:\n$tasksLine"
+    }
+
+    private fun renderAlerts() {
+        val alertIds = completedAlerts.keys
+        val unseen = AppSettings.unseenCompletionAlerts(requireContext(), alertIds)
+        txtHomeAlerts.text = if (completedAlerts.isEmpty()) {
+            "Sin alertas nuevas"
+        } else {
+            "${completedAlerts.size} finalizaciones detectadas"
+        }
+
+        if (unseen.isNotEmpty()) {
+            val message = unseen.mapNotNull { completedAlerts[it] }.joinToString("\n\n")
+            NotificationHelper.showCompletionAlert(
+                requireContext(),
+                "Alertas operativas",
+                message
+            )
+            AlertDialog.Builder(requireContext())
+                .setIcon(R.drawable.ic_nav_home)
+                .setTitle("Alertas operativas")
+                .setMessage(message)
+                .setPositiveButton("Entendido") { _, _ ->
+                    AppSettings.markCompletionAlertsSeen(requireContext(), unseen)
+                }
+                .show()
+                .also { DialogStyle.apply(it) }
+        }
+    }
+
+    private fun updatePieChart() {
+        pieDashboard.setValues(activeOperationsCount, openTasksCount, todayMeetingsCount)
+        val total = activeOperationsCount + openTasksCount + todayMeetingsCount
+        val operationsPercent = percent(activeOperationsCount, total)
+        val tasksPercent = percent(openTasksCount, total)
+        val meetingsPercent = percent(todayMeetingsCount, total)
+        txtPieSummary.text =
+            "Rojo operaciones: $operationsPercent% ($activeOperationsCount)\nRosa actividades: $tasksPercent% ($openTasksCount)\nGris reuniones: $meetingsPercent% ($todayMeetingsCount)"
     }
 
     private fun percent(value: Int, total: Int): Int {
@@ -180,6 +318,21 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private fun formatDate(day: Int, month: Int, year: Int): String {
         return "$day/$month/$year"
+    }
+
+    private fun isDueSoon(date: String, time: String): Boolean {
+        val dueAt = parseDateTime(date, time) ?: return false
+        val now = System.currentTimeMillis()
+        val next24Hours = now + 24L * 60L * 60L * 1000L
+        return dueAt in now..next24Hours
+    }
+
+    private fun parseDateTime(date: String, time: String): Long? {
+        if (date.isBlank()) return null
+        val value = "$date ${time.ifBlank { "23:59" }}"
+        return runCatching {
+            SimpleDateFormat("d/M/yyyy HH:mm", Locale("es", "MX")).parse(value)?.time
+        }.getOrNull()
     }
 
     companion object {

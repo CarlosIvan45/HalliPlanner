@@ -2,6 +2,8 @@ package com.example.halliplanner
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -23,6 +25,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var engineers: ArrayList<Engineer>
+    private lateinit var filteredEngineers: ArrayList<Engineer>
     private lateinit var engineerIds: ArrayList<String>
     private lateinit var adapter: EngineerAdapter
     private lateinit var engineerList: ListView
@@ -30,6 +33,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
     private lateinit var txtEngineerSummary: TextView
     private lateinit var txtDesignCount: TextView
     private lateinit var txtFieldCount: TextView
+    private lateinit var inputEngineerSearch: EditText
     private lateinit var btnAddEngineer: MaterialButton
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -38,27 +42,30 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
         engineers = ArrayList()
+        filteredEngineers = ArrayList()
         engineerIds = ArrayList()
-        adapter = EngineerAdapter(engineers)
+        adapter = EngineerAdapter(filteredEngineers)
 
         engineerList = view.findViewById(R.id.engineerList)
         txtEngineerEmpty = view.findViewById(R.id.txtEngineerEmpty)
         txtEngineerSummary = view.findViewById(R.id.txtEngineerSummary)
         txtDesignCount = view.findViewById(R.id.txtDesignCount)
         txtFieldCount = view.findViewById(R.id.txtFieldCount)
+        inputEngineerSearch = view.findViewById(R.id.inputEngineerSearch)
         btnAddEngineer = view.findViewById(R.id.btnAddEngineer)
 
         engineerList.adapter = adapter
         engineerList.emptyView = txtEngineerEmpty
 
         btnAddEngineer.setOnClickListener { showEngineerDialog() }
+        inputEngineerSearch.addTextChangedListener(simpleWatcher { applyEngineerSearch() })
 
         engineerList.setOnItemClickListener { _, _, position, _ ->
-            showEngineerDialog(engineers[position])
+            showEngineerDialog(filteredEngineers[position])
         }
 
         engineerList.setOnItemLongClickListener { _, _, position, _ ->
-            confirmDeleteEngineer(engineers[position])
+            confirmDeleteEngineer(filteredEngineers[position])
             true
         }
 
@@ -96,7 +103,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
                 txtEngineerSummary.text = "${engineers.size} ingenieros disponibles para asignacion."
                 txtDesignCount.text = "Diseno: $design"
                 txtFieldCount.text = "Campo: $field"
-                adapter.notifyDataSetChanged()
+                applyEngineerSearch()
             }
             .addOnFailureListener { showError("No se pudieron cargar ingenieros", it) }
     }
@@ -125,6 +132,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
         }
 
         AlertDialog.Builder(requireContext())
+            .setIcon(R.drawable.ic_nav_engineers)
             .setTitle(if (engineer == null) "Registrar ingeniero" else "Editar ingeniero")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
@@ -161,10 +169,12 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun confirmDeleteEngineer(engineer: Engineer) {
         AlertDialog.Builder(requireContext())
+            .setIcon(android.R.drawable.ic_menu_delete)
             .setTitle("Eliminar ingeniero")
             .setMessage("Quieres eliminar a ${engineer.name.ifBlank { "este ingeniero" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
@@ -178,6 +188,7 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun showError(message: String, error: Exception) {
@@ -203,6 +214,9 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
             row.findViewById<TextView>(R.id.txtEngineerContact).text =
                 listOf(engineer.email, engineer.phone).filter { it.isNotBlank() }.joinToString(" | ")
                     .ifBlank { "Sin contacto registrado" }
+            row.findViewById<MaterialButton>(R.id.btnEditEngineer).setOnClickListener {
+                showEngineerDialog(engineer)
+            }
             row.findViewById<MaterialButton>(R.id.btnDeleteEngineer).setOnClickListener {
                 confirmDeleteEngineer(engineer)
             }
@@ -221,5 +235,24 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
 
     companion object {
         private const val TAG = "EngineersFragment"
+    }
+
+    private fun applyEngineerSearch() {
+        val query = inputEngineerSearch.text.toString().trim().lowercase()
+        filteredEngineers.clear()
+        engineers.filterTo(filteredEngineers) { engineer ->
+            query.isBlank() ||
+                listOf(engineer.name, engineer.type, engineer.specialty, engineer.email, engineer.phone)
+                    .any { it.lowercase().contains(query) }
+        }
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun simpleWatcher(onChanged: () -> Unit): TextWatcher {
+        return object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = onChanged()
+            override fun afterTextChanged(s: Editable?) = Unit
+        }
     }
 }

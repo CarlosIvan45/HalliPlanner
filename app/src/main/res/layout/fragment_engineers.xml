@@ -6,7 +6,7 @@
     android:background="@color/planner_background"
     android:fillViewport="true"
     android:paddingStart="24dp"
-    android:paddingTop="26dp"
+    android:paddingTop="44dp"
     android:paddingEnd="24dp"
     android:paddingBottom="26dp">
 
@@ -34,6 +34,8 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:background="@drawable/bg_title_pastel"
+                    android:padding="14dp"
                     android:text="Ingenieros"
                     android:gravity="center"
                     android:textColor="@color/planner_text"
@@ -83,14 +85,24 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
+        <EditText
+            android:id="@+id/inputEngineerSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="12dp"
+            android:hint="Buscar ingenieros"
+            android:inputType="textCapWords" />
+
         <ListView
             android:id="@+id/engineerList"
             android:layout_width="match_parent"
             android:layout_height="430dp"
             android:layout_marginTop="16dp"
             android:cacheColorHint="@android:color/transparent"
+            android:clipToPadding="false"
             android:divider="@android:color/transparent"
-            android:dividerHeight="0dp" />
+            android:dividerHeight="8dp" />
 
         <TextView
             android:id="@+id/txtEngineerEmpty"

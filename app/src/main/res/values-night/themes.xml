@@ -1,7 +1,36 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.HalliPlanner" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <item name="colorPrimary">@color/planner_primary</item>
+        <item name="colorSecondary">@color/planner_accent</item>
+        <item name="colorSurface">@color/planner_surface</item>
+        <item name="colorOnSurface">@color/planner_text</item>
+        <item name="colorPrimaryVariant">@color/planner_primary_dark</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/planner_background</item>
+        <item name="android:navigationBarColor">@color/planner_surface</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:colorAccent">@color/planner_primary</item>
+        <item name="android:alertDialogTheme">@style/Theme.HalliPlanner.Dialog</item>
+    </style>
+
+    <style name="Theme.HalliPlanner" parent="Base.Theme.HalliPlanner" />
+
+    <style name="Theme.HalliPlanner.Dialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">@color/planner_primary</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowBackground">@color/planner_surface</item>
+        <item name="android:textColorPrimary">@color/planner_text</item>
+        <item name="android:textColorSecondary">@color/planner_muted</item>
+    </style>
+
+    <style name="Widget.HalliPlanner.NavigationIndicator" parent="">
+        <item name="android:color">@color/planner_accent_soft</item>
+    </style>
+
+    <style name="Widget.HalliPlanner.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/planner_primary</item>
+        <item name="trackTint">@color/planner_surface_soft</item>
     </style>
 </resources>

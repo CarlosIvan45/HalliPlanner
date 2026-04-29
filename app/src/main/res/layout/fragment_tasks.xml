@@ -6,7 +6,7 @@
     android:background="@color/planner_background"
     android:fillViewport="true"
     android:paddingStart="24dp"
-    android:paddingTop="26dp"
+    android:paddingTop="44dp"
     android:paddingEnd="24dp"
     android:paddingBottom="26dp">
 
@@ -18,6 +18,8 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_title_pastel"
+            android:padding="14dp"
             android:text="Tareas y operaciones"
             android:gravity="center"
             android:textColor="@color/planner_text"
@@ -131,13 +133,34 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+        <EditText
+            android:id="@+id/inputTaskSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Buscar tareas"
+            android:inputType="textCapSentences" />
+
+        <Spinner
+            android:id="@+id/spinnerTaskStatusFilter"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="8dp" />
+
+        <Spinner
+            android:id="@+id/spinnerTaskPriorityFilter"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="12dp" />
+
         <ListView
             android:id="@+id/taskList"
             android:layout_width="match_parent"
             android:layout_height="430dp"
             android:cacheColorHint="@android:color/transparent"
+            android:clipToPadding="false"
             android:divider="@android:color/transparent"
-            android:dividerHeight="0dp" />
+            android:dividerHeight="8dp" />
 
         <TextView
             android:id="@+id/txtTaskEmpty"
@@ -155,5 +178,16 @@
             android:layout_marginTop="16dp"
             android:text="Agregar tarea u operacion"
             app:icon="@android:drawable/ic_input_add" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportTasks"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Exportar reporte PDF"
+            android:textColor="@color/planner_primary"
+            app:icon="@android:drawable/ic_menu_save"
+            app:strokeColor="@color/planner_primary" />
     </LinearLayout>
 </ScrollView>

@@ -12,8 +12,8 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical"
+        android:layout_height="match_parent"
+        android:gravity="center"
         android:orientation="vertical">
 
         <TextView
@@ -85,6 +85,15 @@
                     android:layout_marginTop="12dp"
                     android:hint="Contrasena"
                     android:inputType="textPassword" />
+
+                <CheckBox
+                    android:id="@+id/checkRememberMe"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:buttonTint="@color/planner_primary"
+                    android:text="Recordarme por 15 dias"
+                    android:textColor="@color/planner_muted" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPrimaryAuth"

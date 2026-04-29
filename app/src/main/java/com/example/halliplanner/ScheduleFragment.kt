@@ -1,13 +1,13 @@
 package com.example.halliplanner
 
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.CalendarView
 import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
@@ -17,7 +17,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
 
@@ -25,7 +27,13 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
     private lateinit var auth: FirebaseAuth
     private lateinit var meetingListView: ListView
     private lateinit var btnAddMeeting: MaterialButton
+    private lateinit var btnPickDate: MaterialButton
+    private lateinit var btnWeekView: MaterialButton
+    private lateinit var btnMonthView: MaterialButton
     private lateinit var txtSelectedDate: TextView
+    private lateinit var txtAgendaDay: TextView
+    private lateinit var txtAgendaSummary: TextView
+    private lateinit var txtAgendaRangeSummary: TextView
     private lateinit var txtMeetingEmpty: TextView
     private lateinit var meetingList: ArrayList<PlannerMeeting>
     private lateinit var meetingIds: ArrayList<String>
@@ -43,10 +51,15 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         auth = FirebaseAuth.getInstance()
         meetingListView = view.findViewById(R.id.meetingList)
         btnAddMeeting = view.findViewById(R.id.btnAddMeeting)
+        btnPickDate = view.findViewById(R.id.btnPickDate)
+        btnWeekView = view.findViewById(R.id.btnWeekView)
+        btnMonthView = view.findViewById(R.id.btnMonthView)
         txtSelectedDate = view.findViewById(R.id.txtSelectedDate)
+        txtAgendaDay = view.findViewById(R.id.txtAgendaDay)
+        txtAgendaSummary = view.findViewById(R.id.txtAgendaSummary)
+        txtAgendaRangeSummary = view.findViewById(R.id.txtAgendaRangeSummary)
         txtMeetingEmpty = view.findViewById(R.id.txtMeetingEmpty)
 
-        val calendarView = view.findViewById<CalendarView>(R.id.calendarView)
         meetingList = ArrayList()
         meetingIds = ArrayList()
         adapter = MeetingAdapter(meetingList)
@@ -62,11 +75,9 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         updateSelectedDateLabel()
         loadMeetings(selectedDate)
 
-        calendarView.setOnDateChangeListener { _, year, month, day ->
-            selectedDate = formatDate(day, month + 1, year)
-            updateSelectedDateLabel()
-            loadMeetings(selectedDate)
-        }
+        btnPickDate.setOnClickListener { showDatePicker() }
+        btnWeekView.setOnClickListener { loadRangeMeetings(RangeMode.WEEK) }
+        btnMonthView.setOnClickListener { loadRangeMeetings(RangeMode.MONTH) }
 
         btnAddMeeting.setOnClickListener {
             showMeetingDialog()
@@ -113,6 +124,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         }
 
         AlertDialog.Builder(requireContext())
+            .setIcon(R.drawable.ic_nav_agenda)
             .setTitle(if (meeting == null) "Planear reunion" else "Editar reunion")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
@@ -130,6 +142,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun saveMeeting(
@@ -199,6 +212,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                 }
 
                 adapter.notifyDataSetChanged()
+                txtAgendaSummary.text = "${documents.size()} reuniones programadas"
             }
             .addOnFailureListener { error ->
                 showFirestoreError("No se pudieron cargar las reuniones", error)
@@ -207,6 +221,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
 
     private fun confirmDeleteMeeting(meeting: PlannerMeeting, meetingId: String) {
         AlertDialog.Builder(requireContext())
+            .setIcon(android.R.drawable.ic_menu_delete)
             .setTitle("Eliminar reunion")
             .setMessage("Quieres eliminar ${meeting.title.ifBlank { "esta reunion" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
@@ -222,10 +237,36 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+            .also { DialogStyle.apply(it) }
     }
 
     private fun updateSelectedDateLabel() {
         txtSelectedDate.text = "Agenda para $selectedDate"
+        val parsed = SimpleDateFormat("d/M/yyyy", Locale("es", "MX")).parse(selectedDate)
+        txtAgendaDay.text = if (parsed == null) {
+            selectedDate
+        } else {
+            SimpleDateFormat("EEEE d MMMM", Locale("es", "MX"))
+                .format(parsed)
+                .replaceFirstChar { it.titlecase(Locale("es", "MX")) }
+        }
+        btnPickDate.text = selectedDate
+    }
+
+    private fun showDatePicker() {
+        val calendar = Calendar.getInstance()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, day ->
+                selectedDate = formatDate(day, month + 1, year)
+                updateSelectedDateLabel()
+                loadMeetings(selectedDate)
+                txtAgendaRangeSummary.text = "Selecciona semana o mes para ver el resumen."
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     private fun formatDate(day: Int, month: Int, year: Int): String {
@@ -236,6 +277,58 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         Log.e(TAG, message, error)
         val detail = error.localizedMessage ?: error.javaClass.simpleName
         Toast.makeText(context, "$message: $detail", Toast.LENGTH_LONG).show()
+    }
+
+    private fun loadRangeMeetings(mode: RangeMode) {
+        val selected = parseDate(selectedDate) ?: return
+        val start = selected.clone() as Calendar
+        val end = selected.clone() as Calendar
+
+        if (mode == RangeMode.WEEK) {
+            start.firstDayOfWeek = Calendar.MONDAY
+            start.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            end.time = start.time
+            end.add(Calendar.DAY_OF_MONTH, 6)
+        } else {
+            start.set(Calendar.DAY_OF_MONTH, 1)
+            end.time = start.time
+            end.set(Calendar.DAY_OF_MONTH, end.getActualMaximum(Calendar.DAY_OF_MONTH))
+        }
+
+        db.collection("meetings")
+            .get()
+            .addOnSuccessListener { docs ->
+                val grouped = docs
+                    .mapNotNull { doc ->
+                        val date = doc.getString("date").orEmpty()
+                        val calendar = parseDate(date)
+                        if (calendar != null && !calendar.before(start) && !calendar.after(end)) {
+                            date to doc
+                        } else {
+                            null
+                        }
+                    }
+                    .groupBy { it.first }
+
+                val title = if (mode == RangeMode.WEEK) "Semana" else "Mes"
+                val total = grouped.values.sumOf { it.size }
+                val detail = grouped.entries
+                    .sortedBy { parseDate(it.key)?.timeInMillis ?: 0L }
+                    .joinToString("\n") { (date, items) ->
+                        "$date: ${items.size} reuniones"
+                    }
+                    .ifBlank { "Sin reuniones en este periodo." }
+
+                txtAgendaRangeSummary.text = "$title seleccionado: $total reuniones\n$detail"
+            }
+            .addOnFailureListener { showFirestoreError("No se pudo cargar el resumen", it) }
+    }
+
+    private fun parseDate(value: String): Calendar? {
+        return runCatching {
+            val date = SimpleDateFormat("d/M/yyyy", Locale("es", "MX")).parse(value) ?: return null
+            Calendar.getInstance().apply { time = date }
+        }.getOrNull()
     }
 
     private inner class MeetingAdapter(private val items: List<PlannerMeeting>) : BaseAdapter() {
@@ -255,6 +348,12 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                 "${meeting.operation.ifBlank { "Tema general" }} | ${meeting.location.ifBlank { "Sin lugar" }}"
             row.findViewById<TextView>(R.id.txtMeetingPeople).text =
                 "Asistentes: ${meeting.attendees.ifBlank { "Sin asignar" }}"
+            row.findViewById<MaterialButton>(R.id.btnEditMeeting).setOnClickListener {
+                val index = meetingList.indexOf(meeting)
+                if (index >= 0) {
+                    showMeetingDialog(meeting, meetingIds[index])
+                }
+            }
             row.findViewById<MaterialButton>(R.id.btnDeleteMeeting).setOnClickListener {
                 val index = meetingList.indexOf(meeting)
                 if (index >= 0) {
@@ -273,4 +372,9 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         val attendees: String,
         val time: String
     )
+
+    private enum class RangeMode {
+        WEEK,
+        MONTH
+    }
 }

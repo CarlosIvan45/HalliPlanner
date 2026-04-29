@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/planner_background"
     android:paddingStart="24dp"
-    android:paddingTop="26dp"
+    android:paddingTop="44dp"
     android:paddingEnd="24dp"
     android:paddingBottom="26dp">
 
@@ -15,13 +15,31 @@
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_title_pastel"
+            android:gravity="center"
+            android:padding="14dp"
+            android:text="Perfil"
+            android:textColor="@color/planner_text"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
         <com.google.android.material.card.MaterialCardView
             android:layout_width="104dp"
             android:layout_height="104dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="18dp"
             app:cardBackgroundColor="@color/planner_primary"
             app:cardCornerRadius="52dp"
             app:cardElevation="0dp">
+
+            <ImageView
+                android:id="@+id/imgProfilePhoto"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/txtProfileInitial"
@@ -33,6 +51,14 @@
                 android:textSize="38sp"
                 android:textStyle="bold" />
         </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnChangePhoto"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cambiar foto"
+            android:textColor="@color/planner_primary" />
 
         <TextView
             android:id="@+id/txtProfileName"
@@ -97,8 +123,119 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
                     android:text="Operaciones"
                     android:textColor="@color/planner_muted" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Telefono"
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtProfilePhone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Sin telefono"
+                    android:textColor="@color/planner_muted" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ubicacion"
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtProfileLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Sin ubicacion"
+                    android:textColor="@color/planner_muted" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Empresa"
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtProfileCompany"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginBottom="12dp"
+                    android:text="Sin empresa"
+                    android:textColor="@color/planner_muted" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bio profesional"
+                    android:textColor="@color/planner_text"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txtProfileBio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Sin bio registrada"
+                    android:textColor="@color/planner_muted" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardBackgroundColor="@color/planner_surface"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/planner_line"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Modo oscuro"
+                        android:textColor="@color/planner_text"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Colores suaves para trabajar con menos brillo."
+                        android:textColor="@color/planner_muted"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchDarkMode"
+                    style="@style/Widget.HalliPlanner.Switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

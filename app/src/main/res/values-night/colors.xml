@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="planner_background">#101217</color>
+    <color name="planner_surface">#191D25</color>
+    <color name="planner_surface_soft">#242A34</color>
+    <color name="planner_primary">#FF5A72</color>
+    <color name="planner_primary_dark">#D6334E</color>
+    <color name="planner_secondary">#AEB8C8</color>
+    <color name="planner_accent">#FF8A9B</color>
+    <color name="planner_accent_soft">#3A1E29</color>
+    <color name="planner_text">#F4F6FA</color>
+    <color name="planner_muted">#A7B0BE</color>
+    <color name="planner_line">#313846</color>
+    <color name="priority_high">#FF6B7F</color>
+    <color name="priority_medium">#E1B65D</color>
+    <color name="priority_low">#62C987</color>
+    <color name="calendar_text">#F4F6FA</color>
+    <color name="calendar_week_text">#A7B0BE</color>
+</resources>

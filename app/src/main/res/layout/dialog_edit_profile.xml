@@ -31,5 +31,38 @@
             android:layout_marginTop="12dp"
             android:hint="Departamento"
             android:inputType="textCapWords" />
+
+        <EditText
+            android:id="@+id/inputProfilePhone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Telefono"
+            android:inputType="phone" />
+
+        <EditText
+            android:id="@+id/inputProfileLocation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Ubicacion"
+            android:inputType="textCapWords" />
+
+        <EditText
+            android:id="@+id/inputProfileCompany"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Empresa"
+            android:inputType="textCapWords" />
+
+        <EditText
+            android:id="@+id/inputProfileBio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Bio profesional"
+            android:inputType="textMultiLine"
+            android:minLines="3" />
     </LinearLayout>
 </ScrollView>
