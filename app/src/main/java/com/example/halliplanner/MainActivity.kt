@@ -91,15 +91,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        if (!isChangingConfigurations) {
-            if (!SessionManager.isRememberActive(this)) {
-                auth.signOut()
-            }
-        }
+        // Theme changes, rotation, and temporary backgrounding pass through onStop.
+        // Keep the Firebase session alive unless the user explicitly logs out.
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putInt(KEY_SELECTED_NAV, bottomNav.selectedItemId)
+        if (::bottomNav.isInitialized) {
+            outState.putInt(KEY_SELECTED_NAV, bottomNav.selectedItemId)
+        }
         super.onSaveInstanceState(outState)
     }
 

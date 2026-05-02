@@ -17,6 +17,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -35,7 +37,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
     private lateinit var txtAgendaSummary: TextView
     private lateinit var txtAgendaRangeSummary: TextView
     private lateinit var txtMeetingEmpty: TextView
-    private lateinit var meetingList: ArrayList<PlannerMeeting>
+    private lateinit var meetingList: ArrayList<AgendaItem>
     private lateinit var meetingIds: ArrayList<String>
     private lateinit var adapter: MeetingAdapter
     private var selectedDate = ""
@@ -85,11 +87,17 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         }
 
         meetingListView.setOnItemClickListener { _, _, position, _ ->
-            showMeetingDialog(meetingList[position], meetingIds[position])
+            val item = meetingList[position]
+            if (item.kind == AgendaKind.MEETING) {
+                showMeetingDialog(item.toPlannerMeeting(), meetingIds[position])
+            }
         }
 
         meetingListView.setOnItemLongClickListener { _, _, position, _ ->
-            confirmDeleteMeeting(meetingList[position], meetingIds[position])
+            val item = meetingList[position]
+            if (item.kind == AgendaKind.MEETING) {
+                confirmDeleteMeeting(item.toPlannerMeeting(), meetingIds[position])
+            }
             true
         }
     }
@@ -154,6 +162,10 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         attendees: String,
         time: String
     ) {
+        val user = auth.currentUser ?: run {
+            Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+            return
+        }
         val meeting = hashMapOf(
             "title" to title,
             "operation" to operation,
@@ -161,8 +173,8 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             "attendees" to attendees,
             "time" to time,
             "date" to selectedDate,
-            "updatedBy" to auth.currentUser?.uid.orEmpty(),
-            "updatedByEmail" to auth.currentUser?.email.orEmpty(),
+            "updatedBy" to user.uid,
+            "updatedByEmail" to user.email.orEmpty(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
@@ -182,8 +194,10 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             onAvailable()
             return
         }
+        val uid = auth.currentUser?.uid ?: return
 
         db.collection("meetings")
+            .whereEqualTo("createdBy", uid)
             .whereEqualTo("date", selectedDate)
             .get()
             .addOnSuccessListener { meetings ->
@@ -199,6 +213,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                 }
 
                 db.collection("operations")
+                    .whereEqualTo("createdBy", uid)
                     .get()
                     .addOnSuccessListener { operations ->
                         val operationConflict = operations.firstOrNull { doc ->
@@ -228,9 +243,13 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
     }
 
     private fun saveMeetingData(meetingId: String?, meeting: HashMap<String, Any>) {
+        val user = auth.currentUser ?: run {
+            Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (meetingId == null) {
-            meeting["createdBy"] = auth.currentUser?.uid.orEmpty()
-            meeting["createdByEmail"] = auth.currentUser?.email.orEmpty()
+            meeting["createdBy"] = user.uid
+            meeting["createdByEmail"] = user.email.orEmpty()
             meeting["createdAt"] = FieldValue.serverTimestamp()
             db.collection("meetings")
                 .add(meeting)
@@ -243,7 +262,7 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
                 }
         } else {
             db.collection("meetings").document(meetingId)
-                .set(meeting)
+                .set(meeting, SetOptions.merge())
                 .addOnSuccessListener {
                     Toast.makeText(context, "Reunion actualizada", Toast.LENGTH_SHORT).show()
                     loadMeetings(selectedDate)
@@ -255,33 +274,63 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
     }
 
     private fun loadMeetings(date: String) {
+        val uid = auth.currentUser?.uid ?: return
+        val loadedMeetings = ArrayList<AgendaItem>()
+        val loadedTasks = ArrayList<AgendaItem>()
+        val loadedOperations = ArrayList<AgendaItem>()
+
         db.collection("meetings")
+            .whereEqualTo("createdBy", uid)
             .whereEqualTo("date", date)
             .get()
             .addOnSuccessListener { documents ->
-                meetingList.clear()
-                meetingIds.clear()
-
-                for (doc in documents) {
-                    meetingList.add(
-                        PlannerMeeting(
-                            title = doc.getString("title").orEmpty(),
-                            operation = doc.getString("operation").orEmpty(),
-                            location = doc.getString("location").orEmpty(),
-                            attendees = doc.getString("attendees").orEmpty(),
-                            time = doc.getString("time").orEmpty(),
-                            audit = AuditFormatter.fromDocument(doc)
-                        )
-                    )
-                    meetingIds.add(doc.id)
-                }
-
-                adapter.notifyDataSetChanged()
-                txtAgendaSummary.text = "${documents.size()} reuniones programadas"
+                loadedMeetings.addAll(documents.toAgendaMeetings())
+                db.collection("tasks")
+                    .whereEqualTo("createdBy", uid)
+                    .get()
+                    .addOnSuccessListener { tasks ->
+                        loadedTasks.addAll(tasks.toAgendaTasks(date))
+                        db.collection("operations")
+                            .whereEqualTo("createdBy", uid)
+                            .get()
+                            .addOnSuccessListener { operations ->
+                                loadedOperations.addAll(operations.toAgendaOperations(date))
+                                renderAgendaItems(loadedMeetings, loadedTasks, loadedOperations)
+                            }
+                            .addOnFailureListener { error ->
+                                showFirestoreError("No se pudieron cargar las operaciones", error)
+                            }
+                    }
+                    .addOnFailureListener { error ->
+                        showFirestoreError("No se pudieron cargar las actividades", error)
+                    }
             }
             .addOnFailureListener { error ->
                 showFirestoreError("No se pudieron cargar las reuniones", error)
             }
+    }
+
+    private fun renderAgendaItems(
+        meetings: List<AgendaItem>,
+        tasks: List<AgendaItem>,
+        operations: List<AgendaItem>
+    ) {
+        val items = (meetings + tasks + operations).sortedWith(
+            compareBy<AgendaItem> { it.time.ifBlank { "99:99" } }
+                .thenBy { it.kind.ordinal }
+                .thenBy { it.title }
+        )
+
+        meetingList.clear()
+        meetingIds.clear()
+        items.forEach { item ->
+            meetingList.add(item)
+            meetingIds.add(item.id)
+        }
+
+        adapter.notifyDataSetChanged()
+        txtAgendaSummary.text =
+            "${items.size} eventos: ${meetings.size} reuniones, ${tasks.size} actividades, ${operations.size} operaciones"
     }
 
     private fun confirmDeleteMeeting(meeting: PlannerMeeting, meetingId: String) {
@@ -290,6 +339,10 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             .setTitle("Eliminar reunion")
             .setMessage("Quieres eliminar ${meeting.title.ifBlank { "esta reunion" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
+                auth.currentUser?.uid ?: run {
+                    Toast.makeText(context, "Inicia sesion para eliminar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 db.collection("meetings").document(meetingId)
                     .delete()
                     .addOnSuccessListener {
@@ -360,33 +413,85 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             end.set(Calendar.DAY_OF_MONTH, end.getActualMaximum(Calendar.DAY_OF_MONTH))
         }
 
+        val uid = auth.currentUser?.uid ?: return
         db.collection("meetings")
+            .whereEqualTo("createdBy", uid)
             .get()
-            .addOnSuccessListener { docs ->
-                val grouped = docs
-                    .mapNotNull { doc ->
-                        val date = doc.getString("date").orEmpty()
-                        val calendar = parseDate(date)
-                        if (calendar != null && !calendar.before(start) && !calendar.after(end)) {
-                            date to doc
-                        } else {
-                            null
-                        }
+            .addOnSuccessListener { meetings ->
+                db.collection("tasks")
+                    .whereEqualTo("createdBy", uid)
+                    .get()
+                    .addOnSuccessListener { tasks ->
+                        db.collection("operations")
+                            .whereEqualTo("createdBy", uid)
+                            .get()
+                            .addOnSuccessListener { operations ->
+                                renderRangeSummary(mode, start, end, meetings, tasks, operations)
+                            }
+                            .addOnFailureListener { showFirestoreError("No se pudo cargar el resumen de operaciones", it) }
                     }
-                    .groupBy { it.first }
-
-                val title = if (mode == RangeMode.WEEK) "Semana" else "Mes"
-                val total = grouped.values.sumOf { it.size }
-                val detail = grouped.entries
-                    .sortedBy { parseDate(it.key)?.timeInMillis ?: 0L }
-                    .joinToString("\n") { (date, items) ->
-                        "$date: ${items.size} reuniones"
-                    }
-                    .ifBlank { "Sin reuniones en este periodo." }
-
-                txtAgendaRangeSummary.text = "$title seleccionado: $total reuniones\n$detail"
+                    .addOnFailureListener { showFirestoreError("No se pudo cargar el resumen de actividades", it) }
             }
             .addOnFailureListener { showFirestoreError("No se pudo cargar el resumen", it) }
+    }
+
+    private fun renderRangeSummary(
+        mode: RangeMode,
+        start: Calendar,
+        end: Calendar,
+        meetings: QuerySnapshot,
+        tasks: QuerySnapshot,
+        operations: QuerySnapshot
+    ) {
+        val grouped = linkedMapOf<String, Int>()
+
+        fun addDate(date: String) {
+            val calendar = parseDate(date)
+            if (calendar != null && !calendar.before(start) && !calendar.after(end)) {
+                grouped[date] = (grouped[date] ?: 0) + 1
+            }
+        }
+
+        meetings.forEach { doc -> addDate(doc.getString("date").orEmpty()) }
+        tasks.forEach { doc ->
+            addTouchedDates(
+                doc.getString("date").orEmpty(),
+                doc.getString("startDate").orEmpty(),
+                doc.getString("endDate").orEmpty(),
+                ::addDate
+            )
+        }
+        operations.forEach { doc ->
+            addTouchedDates(
+                doc.getString("date").orEmpty(),
+                doc.getString("startDate").orEmpty(),
+                doc.getString("endDate").orEmpty(),
+                ::addDate
+            )
+        }
+
+        val title = if (mode == RangeMode.WEEK) "Semana" else "Mes"
+        val total = grouped.values.sum()
+        val detail = grouped.entries
+            .sortedBy { parseDate(it.key)?.timeInMillis ?: 0L }
+            .joinToString("\n") { (date, count) -> "$date: $count eventos" }
+            .ifBlank { "Sin eventos en este periodo." }
+
+        txtAgendaRangeSummary.text = "$title seleccionado: $total eventos\n$detail"
+    }
+
+    private fun addTouchedDates(mainDate: String, startDate: String, endDate: String, addDate: (String) -> Unit) {
+        val start = startDate.ifBlank { mainDate }
+        val end = endDate.ifBlank { start }
+        if (start.isBlank()) return
+
+        val startCalendar = parseDate(start) ?: return
+        val endCalendar = parseDate(end) ?: startCalendar
+        val cursor = startCalendar.clone() as Calendar
+        while (!cursor.after(endCalendar)) {
+            addDate(formatDate(cursor.get(Calendar.DAY_OF_MONTH), cursor.get(Calendar.MONTH) + 1, cursor.get(Calendar.YEAR)))
+            cursor.add(Calendar.DAY_OF_MONTH, 1)
+        }
     }
 
     private fun parseDate(value: String): Calendar? {
@@ -396,9 +501,9 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
         }.getOrNull()
     }
 
-    private inner class MeetingAdapter(private val items: List<PlannerMeeting>) : BaseAdapter() {
+    private inner class MeetingAdapter(private val items: List<AgendaItem>) : BaseAdapter() {
         override fun getCount(): Int = items.size
-        override fun getItem(position: Int): PlannerMeeting = items[position]
+        override fun getItem(position: Int): AgendaItem = items[position]
         override fun getItemId(position: Int): Long = position.toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
@@ -410,25 +515,117 @@ class ScheduleFragment : Fragment(R.layout.fragment_schedule) {
             row.findViewById<TextView>(R.id.txtMeetingTitle).text =
                 meeting.title.ifBlank { "Reunion sin titulo" }
             row.findViewById<TextView>(R.id.txtMeetingMeta).text =
-                "${meeting.operation.ifBlank { "Tema general" }} | ${meeting.location.ifBlank { "Sin lugar" }}"
+                "${meeting.kind.label} | ${meeting.operation.ifBlank { "Tema general" }} | ${meeting.location.ifBlank { "Sin lugar" }}"
             row.findViewById<TextView>(R.id.txtMeetingPeople).text =
                 "Asistentes: ${meeting.attendees.ifBlank { "Sin asignar" }}"
             row.findViewById<TextView>(R.id.txtMeetingAudit).text = meeting.audit
-            row.findViewById<MaterialButton>(R.id.btnEditMeeting).setOnClickListener {
+            val editButton = row.findViewById<MaterialButton>(R.id.btnEditMeeting)
+            val deleteButton = row.findViewById<MaterialButton>(R.id.btnDeleteMeeting)
+            editButton.visibility = if (meeting.kind == AgendaKind.MEETING) View.VISIBLE else View.GONE
+            deleteButton.visibility = if (meeting.kind == AgendaKind.MEETING) View.VISIBLE else View.GONE
+            editButton.setOnClickListener {
                 val index = meetingList.indexOf(meeting)
                 if (index >= 0) {
-                    showMeetingDialog(meeting, meetingIds[index])
+                    showMeetingDialog(meeting.toPlannerMeeting(), meetingIds[index])
                 }
             }
-            row.findViewById<MaterialButton>(R.id.btnDeleteMeeting).setOnClickListener {
+            deleteButton.setOnClickListener {
                 val index = meetingList.indexOf(meeting)
                 if (index >= 0) {
-                    confirmDeleteMeeting(meeting, meetingIds[index])
+                    confirmDeleteMeeting(meeting.toPlannerMeeting(), meetingIds[index])
                 }
             }
 
             return row
         }
+    }
+
+    private fun QuerySnapshot.toAgendaMeetings(): List<AgendaItem> {
+        return map { doc ->
+            AgendaItem(
+                id = doc.id,
+                kind = AgendaKind.MEETING,
+                title = doc.getString("title").orEmpty(),
+                operation = doc.getString("operation").orEmpty(),
+                location = doc.getString("location").orEmpty(),
+                attendees = doc.getString("attendees").orEmpty(),
+                time = doc.getString("time").orEmpty(),
+                audit = AuditFormatter.fromDocument(doc)
+            )
+        }
+    }
+
+    private fun QuerySnapshot.toAgendaTasks(date: String): List<AgendaItem> {
+        return filter { doc ->
+            itemTouchesDate(
+                date,
+                doc.getString("date").orEmpty(),
+                doc.getString("startDate").orEmpty(),
+                doc.getString("endDate").orEmpty()
+            )
+        }.map { doc ->
+            AgendaItem(
+                id = doc.id,
+                kind = AgendaKind.TASK,
+                title = doc.getString("title").orEmpty(),
+                operation = doc.getString("operation").orEmpty(),
+                location = doc.getString("status").orEmpty().ifBlank { "Pendiente" },
+                attendees = doc.getString("assignedTo").orEmpty(),
+                time = doc.getString("startTime").orEmpty(),
+                audit = AuditFormatter.fromDocument(doc)
+            )
+        }
+    }
+
+    private fun QuerySnapshot.toAgendaOperations(date: String): List<AgendaItem> {
+        return filter { doc ->
+            itemTouchesDate(
+                date,
+                doc.getString("date").orEmpty(),
+                doc.getString("startDate").orEmpty(),
+                doc.getString("endDate").orEmpty()
+            )
+        }.map { doc ->
+            AgendaItem(
+                id = doc.id,
+                kind = AgendaKind.OPERATION,
+                title = doc.getString("title").orEmpty(),
+                operation = doc.getString("type").orEmpty(),
+                location = doc.getString("location").orEmpty(),
+                attendees = (doc.get("engineerNames") as? List<*>).orEmpty().joinToString(", "),
+                time = doc.getString("startTime").orEmpty(),
+                audit = AuditFormatter.fromDocument(doc)
+            )
+        }
+    }
+
+    private fun itemTouchesDate(targetDate: String, mainDate: String, startDate: String, endDate: String): Boolean {
+        if (targetDate == mainDate || targetDate == startDate || targetDate == endDate) return true
+        val target = parseDate(targetDate) ?: return false
+        val start = parseDate(startDate.ifBlank { mainDate }) ?: return false
+        val end = parseDate(endDate.ifBlank { startDate.ifBlank { mainDate } }) ?: start
+        return !target.before(start) && !target.after(end)
+    }
+
+    private data class AgendaItem(
+        val id: String,
+        val kind: AgendaKind,
+        val title: String,
+        val operation: String,
+        val location: String,
+        val attendees: String,
+        val time: String,
+        val audit: String
+    ) {
+        fun toPlannerMeeting(): PlannerMeeting {
+            return PlannerMeeting(title, operation, location, attendees, time, audit)
+        }
+    }
+
+    private enum class AgendaKind(val label: String) {
+        MEETING("Reunion"),
+        TASK("Actividad"),
+        OPERATION("Operacion")
     }
 
     private data class PlannerMeeting(

@@ -114,7 +114,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun loadOperations() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("operations")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { documents ->
                 val total = documents.size()
@@ -206,6 +208,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun loadTodayMeetings() {
+        val uid = auth.currentUser?.uid ?: return
         val calendar = Calendar.getInstance()
         val today = formatDate(
             calendar.get(Calendar.DAY_OF_MONTH),
@@ -214,6 +217,7 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         )
 
         db.collection("meetings")
+            .whereEqualTo("createdBy", uid)
             .whereEqualTo("date", today)
             .get()
             .addOnSuccessListener { documents ->
@@ -245,7 +249,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun loadTasks() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("tasks")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { documents ->
                 val total = documents.size()
@@ -312,7 +318,9 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     }
 
     private fun loadEngineers() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("engineers")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { documents ->
                 val total = documents.size()

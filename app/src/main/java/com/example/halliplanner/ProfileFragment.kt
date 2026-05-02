@@ -16,6 +16,8 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import java.io.File
+import java.io.FileOutputStream
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -197,11 +199,22 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private fun saveProfilePhoto(uri: Uri) {
         val user = auth.currentUser ?: return
-        requireContext().contentResolver.takePersistableUriPermission(
-            uri,
-            Intent.FLAG_GRANT_READ_URI_PERMISSION
-        )
-        currentPhotoUri = uri.toString()
+        try {
+            requireContext().contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: SecurityException) {
+            // Some providers grant temporary read access only; still save and render when possible.
+        }
+
+        val localUri = copyProfilePhotoToLocalStorage(uri, user.uid)
+        if (localUri.isBlank()) {
+            Toast.makeText(context, "No se pudo cargar la imagen seleccionada", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        currentPhotoUri = localUri
         renderProfilePhoto(currentPhotoUri)
 
         db.collection("users").document(user.uid)
@@ -214,6 +227,19 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             }
     }
 
+    private fun copyProfilePhotoToLocalStorage(uri: Uri, uid: String): String {
+        return runCatching {
+            val dir = File(requireContext().filesDir, "profile_photos").apply { mkdirs() }
+            val file = File(dir, "$uid.jpg")
+            requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            } ?: return ""
+            Uri.fromFile(file).toString()
+        }.getOrDefault("")
+    }
+
     private fun renderProfilePhoto(photoUri: String) {
         if (photoUri.isBlank()) {
             imgProfilePhoto.visibility = View.GONE
@@ -221,8 +247,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             return
         }
 
-        imgProfilePhoto.setImageURI(Uri.parse(photoUri))
-        imgProfilePhoto.visibility = View.VISIBLE
-        txtProfileInitial.visibility = View.GONE
+        try {
+            imgProfilePhoto.setImageURI(Uri.parse(photoUri))
+            imgProfilePhoto.visibility = View.VISIBLE
+            txtProfileInitial.visibility = View.GONE
+        } catch (_: Exception) {
+            imgProfilePhoto.visibility = View.GONE
+            txtProfileInitial.visibility = View.VISIBLE
+            Toast.makeText(context, "No se pudo cargar la imagen seleccionada", Toast.LENGTH_SHORT).show()
+        }
     }
 }

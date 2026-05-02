@@ -19,6 +19,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class EngineersFragment : Fragment(R.layout.fragment_engineers) {
 
@@ -74,7 +75,9 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
     }
 
     private fun loadEngineers() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("engineers")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { docs ->
                 engineers.clear()
@@ -137,6 +140,10 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
             .setTitle(if (engineer == null) "Registrar ingeniero" else "Editar ingeniero")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
+                val user = auth.currentUser ?: run {
+                    Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 val name = nameInput.text.toString().trim()
                 if (name.isBlank()) {
                     Toast.makeText(context, "Agrega el nombre", Toast.LENGTH_SHORT).show()
@@ -149,16 +156,16 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
                     "specialty" to specialtyInput.text.toString().trim(),
                     "email" to emailInput.text.toString().trim(),
                     "phone" to phoneInput.text.toString().trim(),
-                    "updatedBy" to auth.currentUser?.uid.orEmpty(),
+                    "updatedBy" to user.uid,
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
 
                 val request = if (engineer == null) {
-                    data["createdBy"] = auth.currentUser?.uid.orEmpty()
+                    data["createdBy"] = user.uid
                     data["createdAt"] = FieldValue.serverTimestamp()
                     db.collection("engineers").add(data)
                 } else {
-                    db.collection("engineers").document(engineer.id).set(data)
+                    db.collection("engineers").document(engineer.id).set(data, SetOptions.merge())
                 }
 
                 request
@@ -179,6 +186,10 @@ class EngineersFragment : Fragment(R.layout.fragment_engineers) {
             .setTitle("Eliminar ingeniero")
             .setMessage("Quieres eliminar a ${engineer.name.ifBlank { "este ingeniero" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
+                auth.currentUser?.uid ?: run {
+                    Toast.makeText(context, "Inicia sesion para eliminar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 db.collection("engineers").document(engineer.id)
                     .delete()
                     .addOnSuccessListener {

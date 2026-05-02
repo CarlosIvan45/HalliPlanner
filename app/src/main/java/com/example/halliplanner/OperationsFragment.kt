@@ -3,6 +3,9 @@ package com.example.halliplanner
 import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -22,6 +25,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import java.util.Calendar
 
 class OperationsFragment : Fragment(R.layout.fragment_operations) {
@@ -106,7 +110,9 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
     }
 
     private fun loadEngineers() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("engineers")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { docs ->
                 engineers.clear()
@@ -127,7 +133,9 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
     }
 
     private fun loadOperations() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("operations")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { docs ->
                 operations.clear()
@@ -273,6 +281,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             .setTitle(if (operation == null) "Crear operacion" else "Editar operacion")
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
+                val user = auth.currentUser ?: run {
+                    Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 val title = titleInput.text.toString().trim()
                 if (title.isBlank()) {
                     Toast.makeText(context, "Agrega el nombre de la operacion", Toast.LENGTH_SHORT).show()
@@ -300,8 +312,8 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                     "description" to descriptionInput.text.toString().trim(),
                     "engineerIds" to selectedEngineers.map { it.id },
                     "engineerNames" to selectedEngineers.map { it.name },
-                    "updatedBy" to auth.currentUser?.uid.orEmpty(),
-                    "updatedByEmail" to auth.currentUser?.email.orEmpty(),
+                    "updatedBy" to user.uid,
+                    "updatedByEmail" to user.email.orEmpty(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
 
@@ -313,7 +325,7 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
                     endDateInput.text.toString().trim().ifBlank { dateInput.text.toString().trim() },
                     endTimeInput.text.toString().trim()
                 ) {
-                    saveOperationData(operation, data)
+                    saveOperationData(operation, data, selectedEngineers)
                 }
             }
             .setNegativeButton("Cancelar", null)
@@ -335,8 +347,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             onAvailable()
             return
         }
+        val uid = auth.currentUser?.uid ?: return
 
         db.collection("operations")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { docs ->
                 val conflict = docs.firstOrNull { doc ->
@@ -367,27 +381,110 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             .addOnFailureListener { showError("No se pudo validar disponibilidad", it) }
     }
 
-    private fun saveOperationData(operation: Operation?, data: HashMap<String, Any>) {
+    private fun saveOperationData(
+        operation: Operation?,
+        data: HashMap<String, Any>,
+        selectedEngineers: List<EngineersFragment.Engineer>
+    ) {
+        val user = auth.currentUser ?: run {
+            Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val engineersToNotify = selectedEngineers.filter { engineer ->
+            operation == null ||
+                (!operation.engineerIds.contains(engineer.id) && !operation.engineerNames.contains(engineer.name))
+        }
         if (operation == null) {
-            data["createdBy"] = auth.currentUser?.uid.orEmpty()
-            data["createdByEmail"] = auth.currentUser?.email.orEmpty()
+            data["createdBy"] = user.uid
+            data["createdByEmail"] = user.email.orEmpty()
             data["createdAt"] = FieldValue.serverTimestamp()
             db.collection("operations")
                 .add(data)
                 .addOnSuccessListener {
                     Toast.makeText(context, "Operacion creada", Toast.LENGTH_SHORT).show()
                     loadOperations()
+                    notifyAssignedEngineersByEmail(data, engineersToNotify)
                 }
                 .addOnFailureListener { showError("No se pudo guardar", it) }
         } else {
             db.collection("operations").document(operation.id)
-                .set(data)
+                .set(data, SetOptions.merge())
                 .addOnSuccessListener {
                     Toast.makeText(context, "Operacion actualizada", Toast.LENGTH_SHORT).show()
                     loadOperations()
+                    notifyAssignedEngineersByEmail(data, engineersToNotify)
                 }
                 .addOnFailureListener { showError("No se pudo actualizar", it) }
         }
+    }
+
+    private fun notifyAssignedEngineersByEmail(
+        operationData: HashMap<String, Any>,
+        assignedEngineers: List<EngineersFragment.Engineer>
+    ) {
+        if (assignedEngineers.isEmpty()) return
+
+        val recipients = assignedEngineers
+            .map { it.email.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+
+        if (recipients.isEmpty()) {
+            Toast.makeText(context, "Los ingenieros asignados no tienen correo registrado.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val title = operationData["title"].toString().ifBlank { "Operacion sin nombre" }
+        val subject = "Asignacion de operacion: $title"
+        val body = buildAssignmentEmailBody(operationData, assignedEngineers)
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:")
+            putExtra(Intent.EXTRA_EMAIL, recipients.toTypedArray())
+            putExtra(Intent.EXTRA_SUBJECT, subject)
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+
+        try {
+            startActivity(Intent.createChooser(intent, "Enviar notificacion por correo"))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(context, "No hay una app de correo configurada para enviar la notificacion.", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun buildAssignmentEmailBody(
+        operationData: HashMap<String, Any>,
+        assignedEngineers: List<EngineersFragment.Engineer>
+    ): String {
+        val title = operationData["title"].toString().ifBlank { "Operacion sin nombre" }
+        val type = operationData["type"].toString().ifBlank { "General" }
+        val status = operationData["status"].toString().ifBlank { "Planeada" }
+        val location = operationData["location"].toString().ifBlank { "Sin ubicacion" }
+        val date = operationData["date"].toString()
+        val startDate = operationData["startDate"].toString().ifBlank { date.ifBlank { "Sin fecha" } }
+        val startTime = operationData["startTime"].toString().ifBlank { "Sin hora" }
+        val endDate = operationData["endDate"].toString().ifBlank { date.ifBlank { "Sin fecha" } }
+        val endTime = operationData["endTime"].toString().ifBlank { "Sin hora" }
+        val description = operationData["description"].toString().ifBlank { "Sin descripcion registrada" }
+        val engineerNames = assignedEngineers.joinToString(", ") { it.name.ifBlank { "Ingeniero" } }
+
+        return """
+            Hola,
+
+            Se te ha asignado a una operacion en HalliPlanner.
+
+            Operacion: $title
+            Tipo: $type
+            Estado: $status
+            Ubicacion: $location
+            Inicio: $startDate $startTime
+            Termino: $endDate $endTime
+            Ingenieros asignados: $engineerNames
+
+            Detalles:
+            $description
+
+            Por favor revisa tu agenda y confirma disponibilidad.
+        """.trimIndent()
     }
 
     private fun confirmDeleteOperation(operation: Operation) {
@@ -396,6 +493,10 @@ class OperationsFragment : Fragment(R.layout.fragment_operations) {
             .setTitle("Eliminar operacion")
             .setMessage("Quieres eliminar ${operation.title.ifBlank { "esta operacion" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
+                auth.currentUser?.uid ?: run {
+                    Toast.makeText(context, "Inicia sesion para eliminar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 db.collection("operations").document(operation.id)
                     .delete()
                     .addOnSuccessListener {

@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_title_pastel"
             android:padding="14dp"
-            android:text="Operaciones Generales"
+            android:text="Actividades Generales"
             android:gravity="center"
             android:textColor="@color/planner_text"
             android:textSize="26sp"

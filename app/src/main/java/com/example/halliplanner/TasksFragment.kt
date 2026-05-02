@@ -23,6 +23,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.SetOptions
 import java.util.Calendar
 
 class TasksFragment : Fragment() {
@@ -115,7 +116,9 @@ class TasksFragment : Fragment() {
     }
 
     private fun loadTasks() {
+        val uid = auth.currentUser?.uid ?: return
         db.collection("tasks")
+            .whereEqualTo("createdBy", uid)
             .get()
             .addOnSuccessListener { documents ->
                 taskList.clear()
@@ -252,6 +255,10 @@ class TasksFragment : Fragment() {
         status: String,
         operation: String
     ) {
+        val user = auth.currentUser ?: run {
+            Toast.makeText(context, "Inicia sesion para guardar", Toast.LENGTH_SHORT).show()
+            return
+        }
         val task = hashMapOf(
             "title" to title,
             "description" to description,
@@ -264,14 +271,14 @@ class TasksFragment : Fragment() {
             "priority" to priority,
             "status" to status,
             "operation" to operation,
-            "updatedBy" to auth.currentUser?.uid.orEmpty(),
-            "updatedByEmail" to auth.currentUser?.email.orEmpty(),
+            "updatedBy" to user.uid,
+            "updatedByEmail" to user.email.orEmpty(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
 
         if (taskId == null) {
-            task["createdBy"] = auth.currentUser?.uid.orEmpty()
-            task["createdByEmail"] = auth.currentUser?.email.orEmpty()
+            task["createdBy"] = user.uid
+            task["createdByEmail"] = user.email.orEmpty()
             task["createdAt"] = FieldValue.serverTimestamp()
             db.collection("tasks")
                 .add(task)
@@ -284,7 +291,7 @@ class TasksFragment : Fragment() {
                 }
         } else {
             db.collection("tasks").document(taskId)
-                .set(task)
+                .set(task, SetOptions.merge())
                 .addOnSuccessListener {
                     Toast.makeText(context, "Actividad actualizada", Toast.LENGTH_SHORT).show()
                     loadTasks()
@@ -301,6 +308,10 @@ class TasksFragment : Fragment() {
             .setTitle("Eliminar actividad")
             .setMessage("Quieres eliminar ${task.title.ifBlank { "esta actividad" }}?")
             .setPositiveButton("Eliminar") { _, _ ->
+                auth.currentUser?.uid ?: run {
+                    Toast.makeText(context, "Inicia sesion para eliminar", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
                 db.collection("tasks")
                     .document(taskId)
                     .delete()
